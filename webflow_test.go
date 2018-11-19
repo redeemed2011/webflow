@@ -1,4 +1,4 @@
-package webflow
+package webflowAPI
 
 import (
 	"encoding/json"
@@ -15,10 +15,117 @@ const (
 	siteID = "mysiteid"
 )
 
+type mockItem struct {
+	Name      string `json:"name"`
+	Body      string `json:"body"`
+	Something string `json:"something"`
+	ID        string `json:"_id"`
+}
+
 var (
 	exampleDogCollection = &Collection{
 		ID:   "1",
 		Name: "dogs",
+	}
+	exampleItemDog1 = &mockItem{
+		ID:   "1",
+		Name: "blue",
+	}
+	exampleItemDog2 = &mockItem{
+		ID:   "2",
+		Name: "blue",
+	}
+	exampleItemDog3 = &mockItem{
+		ID:   "2",
+		Name: "blue",
+	}
+	exampleItemDog4 = &mockItem{
+		ID:   "2",
+		Name: "blue",
+	}
+	apiResponseItemsDogs1SubItemsJSON, _ = json.Marshal([]mockItem{
+		*exampleItemDog1,
+		*exampleItemDog2,
+	})
+	apiResponseItemsDogs1 = &CollectionItems{
+		Items:  apiResponseItemsDogs1SubItemsJSON,
+		Offset: 0,
+		Count:  2,
+		Total:  4,
+	}
+	apiResponseItemsDogs2SubItemsJSON, _ = json.Marshal([]mockItem{
+		*exampleItemDog3,
+		*exampleItemDog4,
+	})
+	apiResponseItemsDogs2 = &CollectionItems{
+		Items:  apiResponseItemsDogs2SubItemsJSON,
+		Offset: 2,
+		Count:  2,
+		Total:  4,
+	}
+	// Must be the combination of items from apiResponseItemsDogs1 & apiResponseItemsDogs2.
+	exampleItemsDogs = &[]mockItem{
+		*exampleItemDog1,
+		*exampleItemDog2,
+		*exampleItemDog3,
+		*exampleItemDog4,
+	}
+	exampleItemsDogsJSON, _ = json.Marshal(*exampleItemsDogs)
+	apiResponseItemsDogs    = &CollectionItems{
+		Items:  exampleItemsDogsJSON,
+		Offset: 0,
+		Count:  4,
+		Total:  4,
+	}
+	exampleItemCat1 = &mockItem{
+		ID:   "11",
+		Name: "blue",
+	}
+	exampleItemCat2 = &mockItem{
+		ID:   "12",
+		Name: "blue",
+	}
+	exampleItemCat3 = &mockItem{
+		ID:   "12",
+		Name: "blue",
+	}
+	exampleItemCat4 = &mockItem{
+		ID:   "12",
+		Name: "blue",
+	}
+	apiResponseItemsCats1SubItemsJSON, _ = json.Marshal([]mockItem{
+		*exampleItemCat1,
+		*exampleItemCat2,
+	})
+	apiResponseItemsCats1 = &CollectionItems{
+		Items:  apiResponseItemsCats1SubItemsJSON,
+		Offset: 0,
+		Count:  2,
+		Total:  4,
+	}
+	apiResponseItemsCats2SubItemsJSON, _ = json.Marshal([]mockItem{
+		*exampleItemCat3,
+		*exampleItemCat4,
+	})
+	apiResponseItemsCats2 = &CollectionItems{
+		Items:  apiResponseItemsCats2SubItemsJSON,
+		Offset: 2,
+		Count:  2,
+		Total:  4,
+	}
+	// Must be the combination of items from apiResponseItemsCats1 & apiResponseItemsCats2.
+	exampleItemsCats = &[]mockItem{
+		*exampleItemCat1,
+		*exampleItemCat2,
+		*exampleItemCat3,
+		*exampleItemCat4,
+	}
+	exampleItemsCatsJSON, _ = json.Marshal(*exampleItemsCats)
+	apiResponseItemsCats    = &CollectionItems{
+		Items:  exampleItemsCatsJSON,
+		Offset: 0,
+		Count:  4,
+		Total:  4,
 	}
 	exampleCatCollection = &Collection{
 		ID:   "2",
@@ -27,53 +134,6 @@ var (
 	exampleCollections = &Collections{
 		*exampleDogCollection,
 		*exampleCatCollection,
-	}
-	exampleItemDog1 = &CollectionItem{
-		ID:   "1",
-		Name: "blue",
-	}
-	exampleItemDog2 = &CollectionItem{
-		ID:   "2",
-		Name: "blue",
-	}
-	exampleItemDog3 = &CollectionItem{
-		ID:   "2",
-		Name: "blue",
-	}
-	exampleItemDog4 = &CollectionItem{
-		ID:   "2",
-		Name: "blue",
-	}
-	apiResponseItemsDogs1 = &CollectionItems{
-		Items: []CollectionItem{
-			*exampleItemDog1,
-			*exampleItemDog2,
-		},
-		Offset: 0,
-		Count:  2,
-		Total:  4,
-	}
-	apiResponseItemsDogs2 = &CollectionItems{
-		Items: []CollectionItem{
-			*exampleItemDog3,
-			*exampleItemDog4,
-		},
-		Offset: 2,
-		Count:  2,
-		Total:  4,
-	}
-	// Must be the combination of items from apiResponseItemsDogs1 & apiResponseItemsDogs2.
-	exampleItemsDogs = &[]CollectionItem{
-		*exampleItemDog1,
-		*exampleItemDog2,
-		*exampleItemDog3,
-		*exampleItemDog4,
-	}
-	apiResponseItemsDogs = &CollectionItems{
-		Items:  *exampleItemsDogs,
-		Offset: 0,
-		Count:  4,
-		Total:  4,
 	}
 )
 
@@ -84,7 +144,7 @@ func TestApiGetUnknownResponseFormat(t *testing.T) {
 	}))
 	defer server.Close()
 
-	res := &CollectionItem{}
+	res := &mockItem{}
 	api := New("mytoken", "mysiteid")
 	api.BaseURL = server.URL
 	err := api.MethodGet("/", nil, res)
@@ -115,7 +175,7 @@ func TestApiGetErrorResponseFormat(t *testing.T) {
 	}))
 	defer server.Close()
 
-	res := &CollectionItem{}
+	res := &mockItem{}
 	api := New("mytoken", siteID)
 	api.BaseURL = server.URL
 	// Setup a backoff that is always just 1 millisecond.
@@ -151,7 +211,7 @@ func TestApiGet(t *testing.T) {
 	}))
 	defer server.Close()
 
-	res := &CollectionItem{}
+	res := &mockItem{}
 	api := New("mytoken", siteID)
 	api.BaseURL = server.URL
 	query := map[string]string{
@@ -168,6 +228,35 @@ func TestApiGet(t *testing.T) {
 		t.Errorf("API MethodGet() did not return the expected values! Got %+v.", res)
 	}
 }
+
+// func TestApiGetAll(t *testing.T) {
+// 	// Start a special, local HTTP server.
+// 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+// 		// Look at the query params. Return one set of results if the "offset" query param is set to 2; and another set of
+// 		// results otherwise.
+// 		queryParams := req.URL.Query()
+// 		if queryParams.Get("offset") == "2" {
+// 			data, _ := json.Marshal(apiResponseItemsDogs2)
+// 			rw.Write(data)
+// 			return
+// 		}
+// 		data, _ := json.Marshal(apiResponseItemsDogs1)
+// 		rw.Write(data)
+// 	}))
+// 	defer server.Close()
+
+// 	api := New("mytoken", siteID)
+// 	api.BaseURL = server.URL
+// 	res, err := api.GetAllItemsInCollectionID(exampleDogCollection.ID)
+
+// 	if err != nil {
+// 		t.Error("API GetAllItemsInCollectionID() is expected to return no error when receiving a properly formatted response.")
+// 	}
+
+// 	if !reflect.DeepEqual(res, exampleItemsDogs) {
+// 		t.Errorf("API GetAllItemsInCollectionID() is expected to return exampleItemsDogs! Got %+v.", res)
+// 	}
+// }
 
 func TestApiGetAllCollections(t *testing.T) {
 	// Start a special, local HTTP server.
@@ -278,10 +367,12 @@ func TestApiGetCollectionByName(t *testing.T) {
 	}
 }
 
-func TestApiGetAllItemsInCollectionID(t *testing.T) {
+// TestApiGetAllItemsInCollectionID1 Test the GetAllItemsInCollectionID func for one collection type (dogs).
+func TestApiGetAllItemsInCollectionID1(t *testing.T) {
 	// Start a special, local HTTP server.
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		reqURI := req.URL.String()
+		queryParams := req.URL.Query()
 		expectedURI := fmt.Sprintf(listCollectionItemsURL, exampleDogCollection.ID)
 		if !strings.HasPrefix(reqURI, expectedURI) {
 			t.Errorf(
@@ -293,7 +384,6 @@ func TestApiGetAllItemsInCollectionID(t *testing.T) {
 
 		// Look at the query params. Return one set of results if the "offset" query param is set to 2; and another set of
 		// results otherwise.
-		queryParams := req.URL.Query()
 		if queryParams.Get("offset") == "2" {
 			data, _ := json.Marshal(apiResponseItemsDogs2)
 			rw.Write(data)
@@ -306,46 +396,112 @@ func TestApiGetAllItemsInCollectionID(t *testing.T) {
 
 	api := New("mytoken", siteID)
 	api.BaseURL = server.URL
-	res, err := api.GetAllItemsInCollectionID(exampleDogCollection.ID)
+	items := []mockItem{}
+	err := api.GetAllItemsInCollectionID(exampleDogCollection.ID, 10, func(jsonItems json.RawMessage) error {
+		tempItems := &[]mockItem{}
+		if err2 := json.Unmarshal(jsonItems, tempItems); err2 != nil {
+			return fmt.Errorf("API GetAllItemsInCollectionID() did not return the proper collection items types. Error %+v", err2)
+		}
+		items = append(items, *tempItems...)
+		return nil
+	})
 
 	if err != nil {
-		t.Error("API GetAllItemsInCollectionID() is expected to return no error when receiving a properly formatted response.")
+		t.Errorf("API GetAllItemsInCollectionID() is expected to return no error when receiving a properly formatted response. got: %+v", err)
 	}
 
-	if !reflect.DeepEqual(res, exampleItemsDogs) {
-		t.Errorf("API GetAllItemsInCollectionID() is expected to return exampleItemsDogs! Got %+v.", res)
+	if !reflect.DeepEqual(items, *exampleItemsDogs) {
+		t.Errorf("API GetAllItemsInCollectionID() is expected to return exampleItemsDogs! Got %+v.", items)
 	}
 }
 
-func TestApiGetAllItemsInCollectionName(t *testing.T) {
-	collectionURI := fmt.Sprintf(listCollectionsURL, siteID)
-	itemsURI := fmt.Sprintf(listCollectionItemsURL, exampleDogCollection.ID)
-
+// TestApiGetAllItemsInCollectionID2 Test the GetAllItemsInCollectionID func for another collection type (cats).
+func TestApiGetAllItemsInCollectionID2(t *testing.T) {
 	// Start a special, local HTTP server.
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		reqURI := req.URL.String()
-		switch {
-		case strings.HasPrefix(reqURI, collectionURI):
-			data, _ := json.Marshal(exampleCollections)
-			rw.Write(data)
-		case strings.HasPrefix(reqURI, itemsURI):
-			data, _ := json.Marshal(apiResponseItemsDogs)
-			rw.Write(data)
-		default:
-			t.Errorf("GetAllItemsInCollectionName() did not request the proper URI! requested '%s'.", reqURI)
+		queryParams := req.URL.Query()
+		expectedURI := fmt.Sprintf(listCollectionItemsURL, exampleCatCollection.ID)
+		if !strings.HasPrefix(reqURI, expectedURI) {
+			t.Errorf(
+				"GetAllItemsInCollectionID() did not request the proper URI! requested '%s'; expected '%s'.",
+				reqURI,
+				expectedURI,
+			)
 		}
+
+		// Look at the query params. Return one set of results if the "offset" query param is set to 2; and another set of
+		// results otherwise.
+		if queryParams.Get("offset") == "2" {
+			data, _ := json.Marshal(apiResponseItemsCats2)
+			rw.Write(data)
+			return
+		}
+		data, _ := json.Marshal(apiResponseItemsCats1)
+		rw.Write(data)
 	}))
 	defer server.Close()
 
 	api := New("mytoken", siteID)
 	api.BaseURL = server.URL
-	res, err := api.GetAllItemsInCollectionName(exampleDogCollection.Name)
+	items := []mockItem{}
+	err := api.GetAllItemsInCollectionID(exampleCatCollection.ID, 10, func(jsonItems json.RawMessage) error {
+		tempItems := &[]mockItem{}
+		if err2 := json.Unmarshal(jsonItems, tempItems); err2 != nil {
+			return fmt.Errorf("API GetAllItemsInCollectionID() did not return the proper collection items types. Error %+v", err2)
+		}
+		items = append(items, *tempItems...)
+		return nil
+	})
 
 	if err != nil {
-		t.Error("API GetAllItemsInCollectionName() is expected to return no error when receiving a properly formatted response.")
+		t.Errorf("API GetAllItemsInCollectionID() is expected to return no error when receiving a properly formatted response. got: %+v", err)
 	}
 
-	if !reflect.DeepEqual(res, exampleItemsDogs) {
-		t.Errorf("API GetAllItemsInCollectionName() is expected to return exampleItemsDogs! Got %+v.", res)
+	if !reflect.DeepEqual(items, *exampleItemsCats) {
+		t.Errorf("API GetAllItemsInCollectionID() is expected to return exampleItemsCats! Got %+v.", items)
 	}
 }
+
+// func TestApiGetAllItemsInCollectionName(t *testing.T) {
+// 	collectionURI := fmt.Sprintf(listCollectionsURL, siteID)
+// 	itemsURI := fmt.Sprintf(listCollectionItemsURL, exampleDogCollection.ID)
+
+// 	// Start a special, local HTTP server.
+// 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+// 		reqURI := req.URL.String()
+// 		switch {
+// 		case strings.HasPrefix(reqURI, collectionURI):
+// 			data, _ := json.Marshal(exampleCollections)
+// 			rw.Write(data)
+// 		case strings.HasPrefix(reqURI, itemsURI):
+// 			data, _ := json.Marshal(apiResponseItemsDogs)
+// 			rw.Write(data)
+// 		default:
+// 			t.Errorf("GetAllItemsInCollectionName() did not request the proper URI! requested '%s'.", reqURI)
+// 		}
+// 	}))
+// 	defer server.Close()
+
+// 	api := New("mytoken", siteID)
+// 	api.BaseURL = server.URL
+// 	jsonItems, err := api.GetAllItemsInCollectionName(exampleDogCollection.Name)
+
+// 	if err != nil {
+// 		t.Error("API GetAllItemsInCollectionName() is expected to return no error when receiving a properly formatted response.")
+// 	}
+
+// 	items := []mockItem{}
+// 	for _, jsonItem := range jsonItems {
+// 		tempItems := &[]mockItem{}
+// 		err2 := json.Unmarshal(jsonItem, tempItems)
+// 		if err2 != nil {
+// 			t.Errorf("API GetAllItemsInCollectionName() did not return the proper collection items types. Error %+v", err2)
+// 		}
+// 		items = append(items, *tempItems...)
+// 	}
+
+// 	if !reflect.DeepEqual(items, *exampleItemsDogs) {
+// 		t.Errorf("API GetAllItemsInCollectionName() is expected to return exampleItemsDogs! Got %+v.", items)
+// 	}
+// }

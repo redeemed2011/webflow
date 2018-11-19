@@ -1,10 +1,12 @@
-package webflow
+package webflowAPI
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	// "io/ioutil"
 	"net/http"
+	// "reflect"
 	"strconv"
 	"strings"
 
@@ -36,7 +38,7 @@ func New(token, siteID string) *API {
 	client := pester.New()
 
 	// client.Concurrency = 3
-	client.MaxRetries = 5
+	client.MaxRetries = 10
 	client.Backoff = pester.ExponentialBackoff
 	client.KeepLog = true
 	client.RetryOnHTTP429 = true
@@ -78,6 +80,7 @@ func (api *API) MethodGet(uri string, queryParams map[string]string, decodedResp
 	if err != nil {
 		return err
 	}
+	// TODO: read docs for ReaderCloser.Close() to determine what to do when it errors.
 	defer res.Body.Close()
 
 	// Status codes of 200 to 299 are healthy; the rest are an error, redirect, etc.
@@ -127,11 +130,11 @@ func (api *API) GetCollectionByName(name string) (*Collection, error) {
 	return nil, nil
 }
 
+type CollectFunc func(json.RawMessage) error
+
 // GetAllItemsInCollectionID Ask the Webflow API for all the items in a given collection, by the collection's ID.
-func (api *API) GetAllItemsInCollectionID(collectionID string) (*[]CollectionItem, error) {
-	items := []CollectionItem{}
+func (api *API) GetAllItemsInCollectionID(collectionID string, maxPages int, myFunc CollectFunc) error {
 	offset := 0
-	safety := 10
 
 	for {
 		queryParams := map[string]string{
@@ -139,39 +142,42 @@ func (api *API) GetAllItemsInCollectionID(collectionID string) (*[]CollectionIte
 			"limit":  "100",
 		}
 
-		apiItems := &CollectionItems{}
-		err := api.MethodGet(fmt.Sprintf(listCollectionItemsURL, collectionID), queryParams, apiItems)
+		// collectionItems := reflect.New(reflect.TypeOf(itemType)).Interface()
+		collectionItems := &CollectionItems{}
+		err := api.MethodGet(fmt.Sprintf(listCollectionItemsURL, collectionID), queryParams, collectionItems)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		items = append(items, apiItems.Items...)
+		if err = myFunc(collectionItems.Items); err != nil {
+			return err
+		}
 
-		offset = apiItems.Offset + apiItems.Count
+		offset = collectionItems.Offset + collectionItems.Count
 
 		// Webflow API should report when the last set of items has been requested. Once this has happened, this loop should
 		// be broken.
-		if offset >= apiItems.Total {
+		if offset >= collectionItems.Total {
 			break
 		}
 
-		if safety--; safety < 0 {
+		if maxPages--; maxPages < 0 {
 			break
 		}
 	}
 
-	return &items, nil
+	return nil
 }
 
-// GetAllItemsInCollectionName Ask the Webflow API for all the items in a given collection, by the collection's name.
-// The collection name will be searched with case insensitivity.
-func (api *API) GetAllItemsInCollectionName(collectionName string) (*[]CollectionItem, error) {
-	// Find the collection by name.
-	collection, err := api.GetCollectionByName(collectionName)
-	if err != nil {
-		return nil, err
-	}
+// // GetAllItemsInCollectionName Ask the Webflow API for all the items in a given collection, by the collection's name.
+// // The collection name will be searched with case insensitivity.
+// func (api *API) GetAllItemsInCollectionName(collectionName string) ([]json.RawMessage, error) {
+// 	// Find the collection by name.
+// 	collection, err := api.GetCollectionByName(collectionName)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	// Now find the items by the collection's ID.
-	return api.GetAllItemsInCollectionID(collection.ID)
-}
+// 	// Now find the items by the collection's ID.
+// 	return api.GetAllItemsInCollectionID(collection.ID)
+// }

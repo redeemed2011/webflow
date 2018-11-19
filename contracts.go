@@ -1,6 +1,7 @@
-package webflow
+package webflowAPI
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -24,37 +25,22 @@ type Collection struct {
 type Collections []Collection
 
 type CollectionItem struct {
-	Archived       bool   `json:"_archived"`
-	Draft          bool   `json:"_draft"`
-	Color          string `json:"color"`
-	Featured       bool   `json:"featured"`
-	Name           string `json:"name"`
-	PostBody       string `json:"post-body"`
-	PostSummary    string `json:"post-summary"`
-	ThumbnailImage struct {
-		FileID string `json:"fileId"`
-		URL    string `json:"url"`
-	} `json:"thumbnail-image"`
-	MainImage struct {
-		FileID string `json:"fileId"`
-		URL    string `json:"url"`
-	} `json:"main-image"`
-	Slug        string    `json:"slug"`
-	UpdatedOn   time.Time `json:"updated-on"`
-	UpdatedBy   string    `json:"updated-by"`
-	CreatedOn   time.Time `json:"created-on"`
-	CreatedBy   string    `json:"created-by"`
-	PublishedOn time.Time `json:"published-on"`
-	PublishedBy string    `json:"published-by"`
-	Author      string    `json:"author"`
-	Cid         string    `json:"_cid"`
-	ID          string    `json:"_id"`
+	Archived    bool   `json:"_archived"`
+	Draft       bool   `json:"_draft"`
+	Name        string `json:"name"`
+	PostBody    string `json:"post-body"`
+	PostSummary string `json:"post-summary"`
+	Slug        string `json:"slug"`
+	Author      string `json:"author"`
+	Cid         string `json:"_cid"`
+	ID          string `json:"_id"`
 }
 
 type CollectionItems struct {
-	Items  []CollectionItem `json:"items"`
-	Count  int              `json:"count"`
-	Limit  int              `json:"limit"`
-	Offset int              `json:"offset"`
-	Total  int              `json:"total"`
+	// Delay parsing until we know the type.
+	Items  json.RawMessage `json:"items"`
+	Count  int             `json:"count"`
+	Limit  int             `json:"limit"`
+	Offset int             `json:"offset"`
+	Total  int             `json:"total"`
 }
