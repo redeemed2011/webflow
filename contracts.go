@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// GeneralError API response struct when there is an error.
 type GeneralError struct {
 	Msg  string `json:"msg"`
 	Code int    `json:"code"`
@@ -13,6 +14,7 @@ type GeneralError struct {
 	Err  string `json:"err"`
 }
 
+// Collection API contract for CMS collection.
 type Collection struct {
 	ID           string    `json:"_id"`
 	LastUpdated  time.Time `json:"lastUpdated"`
@@ -22,8 +24,10 @@ type Collection struct {
 	SingularName string    `json:"singularName"`
 }
 
+// Collections List of Collection.
 type Collections []Collection
 
+// CollectionItem API contract for item(s) in a given collection.
 type CollectionItem struct {
 	Archived    bool   `json:"_archived"`
 	Draft       bool   `json:"_draft"`
@@ -36,6 +40,7 @@ type CollectionItem struct {
 	ID          string `json:"_id"`
 }
 
+// CollectionItems API contract for retrieving collection items.
 type CollectionItems struct {
 	// Delay parsing until we know the type.
 	Items  json.RawMessage `json:"items"`

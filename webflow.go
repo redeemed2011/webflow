@@ -33,6 +33,10 @@ type API struct {
 	Token, Version, BaseURL, SiteID string
 }
 
+// CollectFunc Used to allow webflowAPI funcs to offload JSON unmarshal work to code outside of webflowAPI to allow
+// collection items of structs not defined in webflowAPI.
+type CollectFunc func(json.RawMessage) error
+
 // New Create a new configuration struct for the Webflow API object.
 func New(token, siteID string) *API {
 	client := pester.New()
@@ -130,8 +134,6 @@ func (api *API) GetCollectionByName(name string) (*Collection, error) {
 	return nil, nil
 }
 
-type CollectFunc func(json.RawMessage) error
-
 // GetAllItemsInCollectionByID Ask the Webflow API for all the items in a given collection, by the collection's ID.
 func (api *API) GetAllItemsInCollectionByID(collectionID string, maxPages int, myFunc CollectFunc) error {
 	offset := 0
@@ -161,6 +163,7 @@ func (api *API) GetAllItemsInCollectionByID(collectionID string, maxPages int, m
 			break
 		}
 
+		// Safety feature to keep the code from infinite looping or asking the API for far too many items.
 		if maxPages--; maxPages < 0 {
 			break
 		}

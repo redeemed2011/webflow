@@ -10,11 +10,11 @@ Go (golang) Webflow API client. It attempts retries, with an exponential backoff
 
 Currently supports:
 
+* General GET method requests.
 * Get all collections.
 * Get collection by name.
 * Get all items in collection by collection ID.
 * Get all items in collection by collection name.
-* General GET method requests.
 
 ## Examples
 
@@ -65,5 +65,5 @@ The code was under great flux at the time this was published.
 
 Items of interest:
 
-* Allow custom structs for API interactions.
+* ~~Allow custom structs for API interactions.~~
 * Replace MethodGet() with something more general since the internal code supports all request methods.

@@ -120,13 +120,6 @@ var (
 		*exampleItemCat3,
 		*exampleItemCat4,
 	}
-	exampleItemsCatsJSON, _ = json.Marshal(*exampleItemsCats)
-	apiResponseItemsCats    = &CollectionItems{
-		Items:  exampleItemsCatsJSON,
-		Offset: 0,
-		Count:  4,
-		Total:  4,
-	}
 	exampleCatCollection = &Collection{
 		ID:   "2",
 		Name: "cats",
