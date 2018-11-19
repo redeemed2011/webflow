@@ -132,8 +132,8 @@ func (api *API) GetCollectionByName(name string) (*Collection, error) {
 
 type CollectFunc func(json.RawMessage) error
 
-// GetAllItemsInCollectionID Ask the Webflow API for all the items in a given collection, by the collection's ID.
-func (api *API) GetAllItemsInCollectionID(collectionID string, maxPages int, myFunc CollectFunc) error {
+// GetAllItemsInCollectionByID Ask the Webflow API for all the items in a given collection, by the collection's ID.
+func (api *API) GetAllItemsInCollectionByID(collectionID string, maxPages int, myFunc CollectFunc) error {
 	offset := 0
 
 	for {
@@ -169,15 +169,19 @@ func (api *API) GetAllItemsInCollectionID(collectionID string, maxPages int, myF
 	return nil
 }
 
-// // GetAllItemsInCollectionName Ask the Webflow API for all the items in a given collection, by the collection's name.
-// // The collection name will be searched with case insensitivity.
-// func (api *API) GetAllItemsInCollectionName(collectionName string) ([]json.RawMessage, error) {
-// 	// Find the collection by name.
-// 	collection, err := api.GetCollectionByName(collectionName)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+// GetAllItemsInCollectionByName Ask the Webflow API for all the items in a given collection, by the collection's name.
+// The collection name will be searched with case insensitivity.
+func (api *API) GetAllItemsInCollectionByName(collectionName string, maxPages int, myFunc CollectFunc) error {
+	// Find the collection by name.
+	collection, err := api.GetCollectionByName(collectionName)
+	if err != nil {
+		return err
+	}
 
-// 	// Now find the items by the collection's ID.
-// 	return api.GetAllItemsInCollectionID(collection.ID)
-// }
+	if collection == nil {
+		return nil
+	}
+
+	// Now find the items by the collection's ID.
+	return api.GetAllItemsInCollectionByID(collection.ID, maxPages, myFunc)
+}

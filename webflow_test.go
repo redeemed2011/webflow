@@ -229,35 +229,6 @@ func TestApiGet(t *testing.T) {
 	}
 }
 
-// func TestApiGetAll(t *testing.T) {
-// 	// Start a special, local HTTP server.
-// 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-// 		// Look at the query params. Return one set of results if the "offset" query param is set to 2; and another set of
-// 		// results otherwise.
-// 		queryParams := req.URL.Query()
-// 		if queryParams.Get("offset") == "2" {
-// 			data, _ := json.Marshal(apiResponseItemsDogs2)
-// 			rw.Write(data)
-// 			return
-// 		}
-// 		data, _ := json.Marshal(apiResponseItemsDogs1)
-// 		rw.Write(data)
-// 	}))
-// 	defer server.Close()
-
-// 	api := New("mytoken", siteID)
-// 	api.BaseURL = server.URL
-// 	res, err := api.GetAllItemsInCollectionID(exampleDogCollection.ID)
-
-// 	if err != nil {
-// 		t.Error("API GetAllItemsInCollectionID() is expected to return no error when receiving a properly formatted response.")
-// 	}
-
-// 	if !reflect.DeepEqual(res, exampleItemsDogs) {
-// 		t.Errorf("API GetAllItemsInCollectionID() is expected to return exampleItemsDogs! Got %+v.", res)
-// 	}
-// }
-
 func TestApiGetAllCollections(t *testing.T) {
 	// Start a special, local HTTP server.
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
@@ -284,7 +255,11 @@ func TestApiGetAllCollections(t *testing.T) {
 	}
 
 	if len(*res) != len(*exampleCollections) {
-		t.Errorf("API GetAllCollections() is expected to return %d collections! Got %d.", len(*exampleCollections), len(*res))
+		t.Errorf(
+			"API GetAllCollections() is expected to return %d collections! Got %d.",
+			len(*exampleCollections),
+			len(*res),
+		)
 	}
 }
 
@@ -367,8 +342,8 @@ func TestApiGetCollectionByName(t *testing.T) {
 	}
 }
 
-// TestApiGetAllItemsInCollectionID1 Test the GetAllItemsInCollectionID func for one collection type (dogs).
-func TestApiGetAllItemsInCollectionID1(t *testing.T) {
+// TestApiGetAllItemsInCollectionByID1 Test the GetAllItemsInCollectionByID func for one collection type (dogs).
+func TestApiGetAllItemsInCollectionByID1(t *testing.T) {
 	// Start a special, local HTTP server.
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		reqURI := req.URL.String()
@@ -376,7 +351,7 @@ func TestApiGetAllItemsInCollectionID1(t *testing.T) {
 		expectedURI := fmt.Sprintf(listCollectionItemsURL, exampleDogCollection.ID)
 		if !strings.HasPrefix(reqURI, expectedURI) {
 			t.Errorf(
-				"GetAllItemsInCollectionID() did not request the proper URI! requested '%s'; expected '%s'.",
+				"GetAllItemsInCollectionByID() did not request the proper URI! requested '%s'; expected '%s'.",
 				reqURI,
 				expectedURI,
 			)
@@ -397,26 +372,32 @@ func TestApiGetAllItemsInCollectionID1(t *testing.T) {
 	api := New("mytoken", siteID)
 	api.BaseURL = server.URL
 	items := []mockItem{}
-	err := api.GetAllItemsInCollectionID(exampleDogCollection.ID, 10, func(jsonItems json.RawMessage) error {
+	err := api.GetAllItemsInCollectionByID(exampleDogCollection.ID, 10, func(jsonItems json.RawMessage) error {
 		tempItems := &[]mockItem{}
 		if err2 := json.Unmarshal(jsonItems, tempItems); err2 != nil {
-			return fmt.Errorf("API GetAllItemsInCollectionID() did not return the proper collection items types. Error %+v", err2)
+			return fmt.Errorf(
+				"API GetAllItemsInCollectionByID() did not return the proper collection items type. Error %+v",
+				err2,
+			)
 		}
 		items = append(items, *tempItems...)
 		return nil
 	})
 
 	if err != nil {
-		t.Errorf("API GetAllItemsInCollectionID() is expected to return no error when receiving a properly formatted response. got: %+v", err)
+		t.Errorf(
+			"API GetAllItemsInCollectionByID() is expected to return no error when receiving a properly formatted response. got: %+v",
+			err,
+		)
 	}
 
 	if !reflect.DeepEqual(items, *exampleItemsDogs) {
-		t.Errorf("API GetAllItemsInCollectionID() is expected to return exampleItemsDogs! Got %+v.", items)
+		t.Errorf("API GetAllItemsInCollectionByID() is expected to return exampleItemsDogs! Got %+v.", items)
 	}
 }
 
-// TestApiGetAllItemsInCollectionID2 Test the GetAllItemsInCollectionID func for another collection type (cats).
-func TestApiGetAllItemsInCollectionID2(t *testing.T) {
+// TestApiGetAllItemsInCollectionByID2 Test the GetAllItemsInCollectionByID func for another collection type (cats).
+func TestApiGetAllItemsInCollectionByID2(t *testing.T) {
 	// Start a special, local HTTP server.
 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 		reqURI := req.URL.String()
@@ -424,7 +405,7 @@ func TestApiGetAllItemsInCollectionID2(t *testing.T) {
 		expectedURI := fmt.Sprintf(listCollectionItemsURL, exampleCatCollection.ID)
 		if !strings.HasPrefix(reqURI, expectedURI) {
 			t.Errorf(
-				"GetAllItemsInCollectionID() did not request the proper URI! requested '%s'; expected '%s'.",
+				"GetAllItemsInCollectionByID() did not request the proper URI! requested '%s'; expected '%s'.",
 				reqURI,
 				expectedURI,
 			)
@@ -445,63 +426,80 @@ func TestApiGetAllItemsInCollectionID2(t *testing.T) {
 	api := New("mytoken", siteID)
 	api.BaseURL = server.URL
 	items := []mockItem{}
-	err := api.GetAllItemsInCollectionID(exampleCatCollection.ID, 10, func(jsonItems json.RawMessage) error {
+	err := api.GetAllItemsInCollectionByID(exampleCatCollection.ID, 10, func(jsonItems json.RawMessage) error {
 		tempItems := &[]mockItem{}
 		if err2 := json.Unmarshal(jsonItems, tempItems); err2 != nil {
-			return fmt.Errorf("API GetAllItemsInCollectionID() did not return the proper collection items types. Error %+v", err2)
+			return fmt.Errorf(
+				"API GetAllItemsInCollectionByID() did not return the proper collection items type. Error %+v",
+				err2,
+			)
 		}
 		items = append(items, *tempItems...)
 		return nil
 	})
 
 	if err != nil {
-		t.Errorf("API GetAllItemsInCollectionID() is expected to return no error when receiving a properly formatted response. got: %+v", err)
+		t.Errorf(
+			"API GetAllItemsInCollectionByID() is expected to return no error when receiving a properly formatted response. got: %+v",
+			err,
+		)
 	}
 
 	if !reflect.DeepEqual(items, *exampleItemsCats) {
-		t.Errorf("API GetAllItemsInCollectionID() is expected to return exampleItemsCats! Got %+v.", items)
+		t.Errorf("API GetAllItemsInCollectionByID() is expected to return exampleItemsCats! Got %+v.", items)
 	}
 }
 
-// func TestApiGetAllItemsInCollectionName(t *testing.T) {
-// 	collectionURI := fmt.Sprintf(listCollectionsURL, siteID)
-// 	itemsURI := fmt.Sprintf(listCollectionItemsURL, exampleDogCollection.ID)
+// TestApiGetAllItemsInCollectionByName Test the GetAllItemsInCollectionByName func for one collection type (dogs).
+func TestApiGetAllItemsInCollectionByName(t *testing.T) {
+	// Start a special, local HTTP server.
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		reqURI := req.URL.String()
+		collectionURL := fmt.Sprintf(listCollectionsURL, siteID)
+		itemsURL := fmt.Sprintf(listCollectionItemsURL, exampleDogCollection.ID)
+		var data []byte
+		switch true {
+		case strings.HasPrefix(reqURI, collectionURL):
+			data, _ = json.Marshal(exampleCollections)
+		case strings.HasPrefix(reqURI, itemsURL):
+			data, _ = json.Marshal(apiResponseItemsDogs)
+		default:
+			t.Errorf(
+				"GetAllItemsInCollectionByID() did not request the proper URI! requested '%s'; expected '%s' or '%s'.",
+				reqURI,
+				collectionURL,
+				itemsURL,
+			)
+		}
 
-// 	// Start a special, local HTTP server.
-// 	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-// 		reqURI := req.URL.String()
-// 		switch {
-// 		case strings.HasPrefix(reqURI, collectionURI):
-// 			data, _ := json.Marshal(exampleCollections)
-// 			rw.Write(data)
-// 		case strings.HasPrefix(reqURI, itemsURI):
-// 			data, _ := json.Marshal(apiResponseItemsDogs)
-// 			rw.Write(data)
-// 		default:
-// 			t.Errorf("GetAllItemsInCollectionName() did not request the proper URI! requested '%s'.", reqURI)
-// 		}
-// 	}))
-// 	defer server.Close()
+		rw.Write(data)
+	}))
+	defer server.Close()
 
-// 	api := New("mytoken", siteID)
-// 	api.BaseURL = server.URL
-// 	jsonItems, err := api.GetAllItemsInCollectionName(exampleDogCollection.Name)
+	api := New("mytoken", siteID)
+	api.BaseURL = server.URL
+	items := []mockItem{}
+	err := api.GetAllItemsInCollectionByName("dogs", 10, func(jsonItems json.RawMessage) error {
+		tempItems := &[]mockItem{}
+		if err2 := json.Unmarshal(jsonItems, tempItems); err2 != nil {
+			return fmt.Errorf(
+				"API GetAllItemsInCollectionByName() did not return the proper collection items type. Error %+v",
+				err2,
+			)
+		}
+		fmt.Println("appending item...")
+		items = append(items, *tempItems...)
+		return nil
+	})
 
-// 	if err != nil {
-// 		t.Error("API GetAllItemsInCollectionName() is expected to return no error when receiving a properly formatted response.")
-// 	}
+	if err != nil {
+		t.Errorf(
+			"API GetAllItemsInCollectionByName() is expected to return no error when receiving a properly formatted response. got: %+v",
+			err,
+		)
+	}
 
-// 	items := []mockItem{}
-// 	for _, jsonItem := range jsonItems {
-// 		tempItems := &[]mockItem{}
-// 		err2 := json.Unmarshal(jsonItem, tempItems)
-// 		if err2 != nil {
-// 			t.Errorf("API GetAllItemsInCollectionName() did not return the proper collection items types. Error %+v", err2)
-// 		}
-// 		items = append(items, *tempItems...)
-// 	}
-
-// 	if !reflect.DeepEqual(items, *exampleItemsDogs) {
-// 		t.Errorf("API GetAllItemsInCollectionName() is expected to return exampleItemsDogs! Got %+v.", items)
-// 	}
-// }
+	if !reflect.DeepEqual(items, *exampleItemsDogs) {
+		t.Errorf("API GetAllItemsInCollectionByName() is expected to return exampleItemsDogs! Got %+v.", items)
+	}
+}
