@@ -26,9 +26,26 @@ const (
 	listCollectionItemsURL = "/collections/%s/items"
 )
 
-// API Represents a configuration struct for Webflow API object.
-type API struct {
-	// Client *http.Client
+// Do as Kubernetes does:
+// 1. Create a "Interface" interface that implements the desired methods.
+//    "type Interface interface" in https://github.com/kubernetes/client-go/blob/master/kubernetes/clientset.go#L59
+// 2. Implement that interface for the pkg.
+// 3. Implement that interface for a mock of the pkg.
+//    "func CreateTestClient() *fake.Clientset" in https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/volume/attachdetach/testing/testvolumespec.go#L63
+// 4. Use #3 in tests for code that imports this pkg (webflowAPI), like the metro-bible project.
+//    "fakeKubeClient := controllervolumetesting.CreateTestClient()" in https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/volume/attachdetach/attach_detach_controller_test.go#L37
+
+//
+type Interface interface {
+	MethodGet(uri string, queryParams map[string]string, decodedResponse interface{}) error
+	GetAllCollections() (*Collections, error)
+	GetCollectionByName(name string) (*Collection, error)
+	GetAllItemsInCollectionByID(collectionID string, maxPages int, myFunc CollectFunc) error
+	GetAllItemsInCollectionByName(collectionName string, maxPages int, myFunc CollectFunc) error
+}
+
+// apiConfig Represents a configuration struct for Webflow apiConfig object.
+type apiConfig struct {
 	Client                          *pester.Client
 	Token, Version, BaseURL, SiteID string
 }
@@ -38,7 +55,7 @@ type API struct {
 type CollectFunc func(json.RawMessage) error
 
 // New Create a new configuration struct for the Webflow API object.
-func New(token, siteID string) *API {
+func New(token, siteID string) *apiConfig {
 	client := pester.New()
 
 	// client.Concurrency = 3
@@ -47,10 +64,8 @@ func New(token, siteID string) *API {
 	client.KeepLog = true
 	client.RetryOnHTTP429 = true
 
-	return &API{
-		// Client: &http.Client{},
-		Client: client,
-		// Client:  pester.New(),
+	return &apiConfig{
+		Client:  client,
 		Token:   token,
 		Version: defaultVersion,
 		BaseURL: defaultURL,
@@ -59,7 +74,7 @@ func New(token, siteID string) *API {
 }
 
 // MethodGet Execute a HTTP GET on the specified URI.
-func (api *API) MethodGet(uri string, queryParams map[string]string, decodedResponse interface{}) error {
+func (api *apiConfig) MethodGet(uri string, queryParams map[string]string, decodedResponse interface{}) error {
 	// Form the request to make to WebFlow.
 	req, err := http.NewRequest("GET", api.BaseURL+uri, nil)
 	if err != nil {
@@ -104,7 +119,7 @@ func (api *API) MethodGet(uri string, queryParams map[string]string, decodedResp
 }
 
 // GetAllCollections Ask the Webflow API for all the collections on a given site.
-func (api *API) GetAllCollections() (*Collections, error) {
+func (api *apiConfig) GetAllCollections() (*Collections, error) {
 	collections := &Collections{}
 	err := api.MethodGet(fmt.Sprintf(listCollectionsURL, api.SiteID), nil, collections)
 
@@ -116,7 +131,7 @@ func (api *API) GetAllCollections() (*Collections, error) {
 }
 
 // GetCollectionByName Query Webflow for all the collections then search them for the requested name, case insensitive.
-func (api *API) GetCollectionByName(name string) (*Collection, error) {
+func (api *apiConfig) GetCollectionByName(name string) (*Collection, error) {
 	collections, err := api.GetAllCollections()
 	if err != nil {
 		return nil, err
@@ -135,7 +150,7 @@ func (api *API) GetCollectionByName(name string) (*Collection, error) {
 }
 
 // GetAllItemsInCollectionByID Ask the Webflow API for all the items in a given collection, by the collection's ID.
-func (api *API) GetAllItemsInCollectionByID(collectionID string, maxPages int, myFunc CollectFunc) error {
+func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages int, myFunc CollectFunc) error {
 	offset := 0
 
 	for {
@@ -174,7 +189,7 @@ func (api *API) GetAllItemsInCollectionByID(collectionID string, maxPages int, m
 
 // GetAllItemsInCollectionByName Ask the Webflow API for all the items in a given collection, by the collection's name.
 // The collection name will be searched with case insensitivity.
-func (api *API) GetAllItemsInCollectionByName(collectionName string, maxPages int, myFunc CollectFunc) error {
+func (api *apiConfig) GetAllItemsInCollectionByName(collectionName string, maxPages int, myFunc CollectFunc) error {
 	// Find the collection by name.
 	collection, err := api.GetCollectionByName(collectionName)
 	if err != nil {
