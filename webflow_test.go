@@ -138,7 +138,7 @@ func TestApiGetUnknownResponseFormat(t *testing.T) {
 	defer server.Close()
 
 	res := &mockItem{}
-	api := New("mytoken", "mysiteid")
+	api := New("mytoken", "mysiteid", &http.Client{})
 	api.BaseURL = server.URL
 	err := api.MethodGet("/", nil, res)
 	if err == nil {
@@ -169,7 +169,7 @@ func TestApiGetErrorResponseFormat(t *testing.T) {
 	defer server.Close()
 
 	res := &mockItem{}
-	api := New("mytoken", siteID)
+	api := New("mytoken", siteID, nil)
 	api.BaseURL = server.URL
 	// Setup a backoff that is always just 1 millisecond.
 	api.Client.Backoff = func(retry int) time.Duration {
@@ -205,7 +205,7 @@ func TestApiGet(t *testing.T) {
 	defer server.Close()
 
 	res := &mockItem{}
-	api := New("mytoken", siteID)
+	api := New("mytoken", siteID, nil)
 	api.BaseURL = server.URL
 	query := map[string]string{
 		"offset": "2",
@@ -239,7 +239,7 @@ func TestApiGetAllCollections(t *testing.T) {
 	}))
 	defer server.Close()
 
-	api := New("mytoken", siteID)
+	api := New("mytoken", siteID, nil)
 	api.BaseURL = server.URL
 	res, err := api.GetAllCollections()
 
@@ -264,7 +264,7 @@ func TestApiGetAllCollectionsUnknownError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	api := New("mytoken", siteID)
+	api := New("mytoken", siteID, nil)
 	api.BaseURL = server.URL
 	_, err := api.GetAllCollections()
 
@@ -288,7 +288,7 @@ func TestApiGetAllCollectionsErrorResponse(t *testing.T) {
 	}))
 	defer server.Close()
 
-	api := New("mytoken", siteID)
+	api := New("mytoken", siteID, nil)
 	api.BaseURL = server.URL
 	_, err := api.GetAllCollections()
 
@@ -309,7 +309,7 @@ func TestApiGetCollectionByName(t *testing.T) {
 	}))
 	defer server.Close()
 
-	api := New("mytoken", siteID)
+	api := New("mytoken", siteID, nil)
 	api.BaseURL = server.URL
 
 	// Test searching for a collection that exists.
@@ -362,7 +362,7 @@ func TestApiGetAllItemsInCollectionByID1(t *testing.T) {
 	}))
 	defer server.Close()
 
-	api := New("mytoken", siteID)
+	api := New("mytoken", siteID, nil)
 	api.BaseURL = server.URL
 	items := []mockItem{}
 	err := api.GetAllItemsInCollectionByID(exampleDogCollection.ID, 10, func(jsonItems json.RawMessage) error {
@@ -416,7 +416,7 @@ func TestApiGetAllItemsInCollectionByID2(t *testing.T) {
 	}))
 	defer server.Close()
 
-	api := New("mytoken", siteID)
+	api := New("mytoken", siteID, nil)
 	api.BaseURL = server.URL
 	items := []mockItem{}
 	err := api.GetAllItemsInCollectionByID(exampleCatCollection.ID, 10, func(jsonItems json.RawMessage) error {
@@ -469,7 +469,7 @@ func TestApiGetAllItemsInCollectionByName(t *testing.T) {
 	}))
 	defer server.Close()
 
-	api := New("mytoken", siteID)
+	api := New("mytoken", siteID, nil)
 	api.BaseURL = server.URL
 	items := []mockItem{}
 	err := api.GetAllItemsInCollectionByName("dogs", 10, func(jsonItems json.RawMessage) error {

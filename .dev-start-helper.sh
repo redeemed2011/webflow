@@ -7,7 +7,7 @@ set -e
 # trap "kill 0" EXIT
 
 date
-dep ensure
+go generate
 
 # date
 # gometalinter ./cmd/${APP:?}/ ./internal/app/${APP:?}/ ./internal/pkg/**/ ./pkg/**/

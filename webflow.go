@@ -1,12 +1,13 @@
 package webflowAPI
 
+// Tell `go generate` to generate the mock for us.
+//go:generate moq -pkg mock -out mock/webflow_moq.go . Interface
+
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	// "io/ioutil"
 	"net/http"
-	// "reflect"
 	"strconv"
 	"strings"
 
@@ -35,7 +36,7 @@ const (
 // 4. Use #3 in tests for code that imports this pkg (webflowAPI), like the metro-bible project.
 //    "fakeKubeClient := controllervolumetesting.CreateTestClient()" in https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/volume/attachdetach/attach_detach_controller_test.go#L37
 
-//
+// Interface Interface for this package's method. Created primarily for testing your code that depends on this package.
 type Interface interface {
 	MethodGet(uri string, queryParams map[string]string, decodedResponse interface{}) error
 	GetAllCollections() (*Collections, error)
@@ -55,8 +56,15 @@ type apiConfig struct {
 type CollectFunc func(json.RawMessage) error
 
 // New Create a new configuration struct for the Webflow API object.
-func New(token, siteID string) *apiConfig {
-	client := pester.New()
+func New(token, siteID string, hc *http.Client) *apiConfig {
+	var client *pester.Client
+
+	// If a http client is passed in, use it.
+	if hc != nil {
+		client = pester.NewExtendedClient(hc)
+	} else {
+		client = pester.New()
+	}
 
 	// client.Concurrency = 3
 	client.MaxRetries = 10
