@@ -65,5 +65,9 @@ The code was under great flux at the time this was published.
 
 Items of interest:
 
-* ~~Allow custom structs for API interactions.~~
-* Replace MethodGet() with something more general since the internal code supports all request methods.
+* Evaluate returning lists of items as raw JSON to simplify this pkg's api. At the time of this writing, getting all items in a collection requires the caller to provide a method to decode the JSON. This does not sit well with me and seems to be more complicated than necessary. If we instead return raw JSON the process is simpler and the caller can then decode the JSON however is desired.
+* Provide methods to get filtered collection items by ID or name. This may be accomplished by decoding only the `id` & `name` fields for the filter then returning the full raw JSON on match.
+* ~~Allow custom structs for API interactions.~~ _Update: may not be worth the investment with the above changes._
+* Replace `MethodGet()` with something more general since the internally used HTTP pkgs support all request methods.
+* Perhaps make `MethodGet()` private rather than exported.
+* Implement Go Modules support for this pkg--specifically versioning of this pkg.
