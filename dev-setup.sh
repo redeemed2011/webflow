@@ -9,12 +9,6 @@ nvm install --lts
 # Install the task runner.
 npm install -g nodemon
 
-# Install the package manager.
-go get -u github.com/golang/dep/cmd/dep
-
-# Ensure all the packages are installed and up to date.
-dep ensure -update
-
 # Install the meta linter.
 cd "${GOPATH}" && \
   curl -L https://git.io/vp6lP | sh

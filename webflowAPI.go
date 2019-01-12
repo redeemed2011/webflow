@@ -1,7 +1,7 @@
 package webflowAPI
 
 // Tell `go generate` to generate the mock for us.
-//go:generate moq -pkg mock -out mock/webflow_moq.go . Interface
+//go:generate moq -pkg mock -out mock/webflowAPI_moq.go . Interface
 
 import (
 	"encoding/json"
