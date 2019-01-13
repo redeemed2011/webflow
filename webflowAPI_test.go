@@ -1,8 +1,10 @@
 package webflowAPI
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -130,15 +132,49 @@ var (
 	}
 )
 
+type HttpClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
+type MockClient struct {
+	DoFunc func(req *http.Request) (*http.Response, error)
+}
+
+func (m *MockClient) Do(req *http.Request) (*http.Response, error) {
+	if m.DoFunc != nil {
+		return m.DoFunc(req)
+	}
+	// just in case you want default correct return value
+	return &http.Response{}, nil
+}
+
 func TestApiGetUnknownResponseFormat(t *testing.T) {
-	// Start a special, local HTTP server.
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		rw.Write([]byte(`Unexpected`))
-	}))
-	defer server.Close()
+	client := &MockClient{
+		DoFunc: func(req *http.Request) (*http.Response, error) {
+			// do whatever you want
+			return &http.Response{
+				StatusCode: http.StatusBadRequest,
+				Body:       ioutil.NopCloser(bytes.NewBufferString("Unexpected")),
+			}, nil
+		},
+	}
+
+	// request, _ := http.NewRequest("GET", "https://www.reallycoolurl.com/bad_request", nil)
+	// // as this is a test, we may skip error handling
+
+	// response, _ := client.Do(request)
+	// if response.StatusCode != http.StatusBadRequest {
+	// 	t.Error("invalid response status code")
+	// }
+
+	// // Start a special, local HTTP server.
+	// server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+	// 	rw.Write([]byte(`Unexpected`))
+	// }))
+	// defer server.Close()
 
 	res := &mockItem{}
-	api := New("mytoken", "mysiteid", &http.Client{})
+	api := New("mytoken", "mysiteid", client)
 	api.BaseURL = server.URL
 	err := api.MethodGet("/", nil, res)
 	if err == nil {

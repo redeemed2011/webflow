@@ -27,15 +27,6 @@ const (
 	listCollectionItemsURL = "/collections/%s/items"
 )
 
-// Do as Kubernetes does:
-// 1. Create a "Interface" interface that implements the desired methods.
-//    "type Interface interface" in https://github.com/kubernetes/client-go/blob/master/kubernetes/clientset.go#L59
-// 2. Implement that interface for the pkg.
-// 3. Implement that interface for a mock of the pkg.
-//    "func CreateTestClient() *fake.Clientset" in https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/volume/attachdetach/testing/testvolumespec.go#L63
-// 4. Use #3 in tests for code that imports this pkg (webflowAPI), like the metro-bible project.
-//    "fakeKubeClient := controllervolumetesting.CreateTestClient()" in https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/volume/attachdetach/attach_detach_controller_test.go#L37
-
 // Interface Interface for this package's method. Created primarily for testing your code that depends on this package.
 type Interface interface {
 	MethodGet(uri string, queryParams map[string]string, decodedResponse interface{}) error
