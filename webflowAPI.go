@@ -27,22 +27,13 @@ const (
 	listCollectionItemsURL = "/collections/%s/items"
 )
 
-// Do as Kubernetes does:
-// 1. Create a "Interface" interface that implements the desired methods.
-//    "type Interface interface" in https://github.com/kubernetes/client-go/blob/master/kubernetes/clientset.go#L59
-// 2. Implement that interface for the pkg.
-// 3. Implement that interface for a mock of the pkg.
-//    "func CreateTestClient() *fake.Clientset" in https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/volume/attachdetach/testing/testvolumespec.go#L63
-// 4. Use #3 in tests for code that imports this pkg (webflowAPI), like the metro-bible project.
-//    "fakeKubeClient := controllervolumetesting.CreateTestClient()" in https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/volume/attachdetach/attach_detach_controller_test.go#L37
-
 // Interface Interface for this package's method. Created primarily for testing your code that depends on this package.
 type Interface interface {
 	MethodGet(uri string, queryParams map[string]string, decodedResponse interface{}) error
 	GetAllCollections() (*Collections, error)
 	GetCollectionByName(name string) (*Collection, error)
-	GetAllItemsInCollectionByID(collectionID string, maxPages int, myFunc CollectFunc) error
-	GetAllItemsInCollectionByName(collectionName string, maxPages int, myFunc CollectFunc) error
+	GetAllItemsInCollectionByID(collectionID string, maxPages int) ([]json.RawMessage, error)
+	GetAllItemsInCollectionByName(collectionName string, maxPages int) ([]json.RawMessage, error)
 }
 
 // apiConfig Represents a configuration struct for Webflow apiConfig object.
@@ -50,10 +41,6 @@ type apiConfig struct {
 	Client                          *pester.Client
 	Token, Version, BaseURL, SiteID string
 }
-
-// CollectFunc Used to allow webflowAPI funcs to offload JSON unmarshal work to code outside of webflowAPI to allow
-// collection items of structs not defined in webflowAPI.
-type CollectFunc func(json.RawMessage) error
 
 // New Create a new configuration struct for the Webflow API object.
 func New(token, siteID string, hc *http.Client) *apiConfig {
@@ -158,8 +145,9 @@ func (api *apiConfig) GetCollectionByName(name string) (*Collection, error) {
 }
 
 // GetAllItemsInCollectionByID Ask the Webflow API for all the items in a given collection, by the collection's ID.
-func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages int, myFunc CollectFunc) error {
+func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages int) ([]json.RawMessage, error) {
 	offset := 0
+	items := []json.RawMessage{}
 
 	for {
 		queryParams := map[string]string{
@@ -171,12 +159,10 @@ func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages 
 		collectionItems := &CollectionItems{}
 		err := api.MethodGet(fmt.Sprintf(listCollectionItemsURL, collectionID), queryParams, collectionItems)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		if err = myFunc(collectionItems.Items); err != nil {
-			return err
-		}
+		items = append(items, collectionItems.Items)
 
 		offset = collectionItems.Offset + collectionItems.Count
 
@@ -192,22 +178,22 @@ func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages 
 		}
 	}
 
-	return nil
+	return items, nil
 }
 
 // GetAllItemsInCollectionByName Ask the Webflow API for all the items in a given collection, by the collection's name.
 // The collection name will be searched with case insensitivity.
-func (api *apiConfig) GetAllItemsInCollectionByName(collectionName string, maxPages int, myFunc CollectFunc) error {
+func (api *apiConfig) GetAllItemsInCollectionByName(collectionName string, maxPages int) ([]json.RawMessage, error) {
 	// Find the collection by name.
 	collection, err := api.GetCollectionByName(collectionName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if collection == nil {
-		return nil
+		return nil, nil
 	}
 
 	// Now find the items by the collection's ID.
-	return api.GetAllItemsInCollectionByID(collection.ID, maxPages, myFunc)
+	return api.GetAllItemsInCollectionByID(collection.ID, maxPages)
 }

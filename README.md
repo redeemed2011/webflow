@@ -37,19 +37,23 @@ Get all items from a collection named "posts":
 
   func getItems() error {
     api := webflowAPI.New("my token", "my site ID")
-    items := []myItem{}
-    err := api.GetAllItemsInCollectionByName("posts", 10, func(jsonItems json.RawMessage) error {
-      tempItems := &[]myItem{}
-      if err2 := json.Unmarshal(jsonItems, tempItems); err2 != nil {
-        return fmt.Errorf("API did not return the proper collection items type. Error %+v", err2)
-      }
-      items = append(items, *tempItems...)
-      return nil
-    })
+
+    itemsJSON, err := api.GetAllItemsInCollectionByName("posts", 10)
 
     if err != nil {
-      fmt.Errorf("Error getting collection items: %+v\n", err)
+      return fmt.Errorf("Error getting collection items: %+v\n", err)
     }
+
+    items := []mockItem{}
+    for _, itemJSON := range itemsJSON {
+      tmpItems := &[]mockItem{}
+      if err2 := json.Unmarshal(itemJSON, tmpItems); err2 != nil {
+        return fmt.Errorf("API did not return the proper collection items type. Error %+v", err2)
+      }
+
+      items = append(items, *tmpItems...)
+    }
+
 
     fmt.Printf("collection items: %+v\n", items)
   }

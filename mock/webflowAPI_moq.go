@@ -4,6 +4,7 @@
 package mock
 
 import (
+	"encoding/json"
 	"github.com/redeemed2011/webflowAPI"
 	"sync"
 )
@@ -25,10 +26,10 @@ var (
 //             GetAllCollectionsFunc: func() (*webflowAPI.Collections, error) {
 // 	               panic("mock out the GetAllCollections method")
 //             },
-//             GetAllItemsInCollectionByIDFunc: func(collectionID string, maxPages int, myFunc webflowAPI.CollectFunc) error {
+//             GetAllItemsInCollectionByIDFunc: func(collectionID string, maxPages int) ([]json.RawMessage, error) {
 // 	               panic("mock out the GetAllItemsInCollectionByID method")
 //             },
-//             GetAllItemsInCollectionByNameFunc: func(collectionName string, maxPages int, myFunc webflowAPI.CollectFunc) error {
+//             GetAllItemsInCollectionByNameFunc: func(collectionName string, maxPages int) ([]json.RawMessage, error) {
 // 	               panic("mock out the GetAllItemsInCollectionByName method")
 //             },
 //             GetCollectionByNameFunc: func(name string) (*webflowAPI.Collection, error) {
@@ -48,10 +49,10 @@ type InterfaceMock struct {
 	GetAllCollectionsFunc func() (*webflowAPI.Collections, error)
 
 	// GetAllItemsInCollectionByIDFunc mocks the GetAllItemsInCollectionByID method.
-	GetAllItemsInCollectionByIDFunc func(collectionID string, maxPages int, myFunc webflowAPI.CollectFunc) error
+	GetAllItemsInCollectionByIDFunc func(collectionID string, maxPages int) ([]json.RawMessage, error)
 
 	// GetAllItemsInCollectionByNameFunc mocks the GetAllItemsInCollectionByName method.
-	GetAllItemsInCollectionByNameFunc func(collectionName string, maxPages int, myFunc webflowAPI.CollectFunc) error
+	GetAllItemsInCollectionByNameFunc func(collectionName string, maxPages int) ([]json.RawMessage, error)
 
 	// GetCollectionByNameFunc mocks the GetCollectionByName method.
 	GetCollectionByNameFunc func(name string) (*webflowAPI.Collection, error)
@@ -70,8 +71,6 @@ type InterfaceMock struct {
 			CollectionID string
 			// MaxPages is the maxPages argument value.
 			MaxPages int
-			// MyFunc is the myFunc argument value.
-			MyFunc webflowAPI.CollectFunc
 		}
 		// GetAllItemsInCollectionByName holds details about calls to the GetAllItemsInCollectionByName method.
 		GetAllItemsInCollectionByName []struct {
@@ -79,8 +78,6 @@ type InterfaceMock struct {
 			CollectionName string
 			// MaxPages is the maxPages argument value.
 			MaxPages int
-			// MyFunc is the myFunc argument value.
-			MyFunc webflowAPI.CollectFunc
 		}
 		// GetCollectionByName holds details about calls to the GetCollectionByName method.
 		GetCollectionByName []struct {
@@ -126,23 +123,21 @@ func (mock *InterfaceMock) GetAllCollectionsCalls() []struct {
 }
 
 // GetAllItemsInCollectionByID calls GetAllItemsInCollectionByIDFunc.
-func (mock *InterfaceMock) GetAllItemsInCollectionByID(collectionID string, maxPages int, myFunc webflowAPI.CollectFunc) error {
+func (mock *InterfaceMock) GetAllItemsInCollectionByID(collectionID string, maxPages int) ([]json.RawMessage, error) {
 	if mock.GetAllItemsInCollectionByIDFunc == nil {
 		panic("InterfaceMock.GetAllItemsInCollectionByIDFunc: method is nil but Interface.GetAllItemsInCollectionByID was just called")
 	}
 	callInfo := struct {
 		CollectionID string
 		MaxPages     int
-		MyFunc       webflowAPI.CollectFunc
 	}{
 		CollectionID: collectionID,
 		MaxPages:     maxPages,
-		MyFunc:       myFunc,
 	}
 	lockInterfaceMockGetAllItemsInCollectionByID.Lock()
 	mock.calls.GetAllItemsInCollectionByID = append(mock.calls.GetAllItemsInCollectionByID, callInfo)
 	lockInterfaceMockGetAllItemsInCollectionByID.Unlock()
-	return mock.GetAllItemsInCollectionByIDFunc(collectionID, maxPages, myFunc)
+	return mock.GetAllItemsInCollectionByIDFunc(collectionID, maxPages)
 }
 
 // GetAllItemsInCollectionByIDCalls gets all the calls that were made to GetAllItemsInCollectionByID.
@@ -151,12 +146,10 @@ func (mock *InterfaceMock) GetAllItemsInCollectionByID(collectionID string, maxP
 func (mock *InterfaceMock) GetAllItemsInCollectionByIDCalls() []struct {
 	CollectionID string
 	MaxPages     int
-	MyFunc       webflowAPI.CollectFunc
 } {
 	var calls []struct {
 		CollectionID string
 		MaxPages     int
-		MyFunc       webflowAPI.CollectFunc
 	}
 	lockInterfaceMockGetAllItemsInCollectionByID.RLock()
 	calls = mock.calls.GetAllItemsInCollectionByID
@@ -165,23 +158,21 @@ func (mock *InterfaceMock) GetAllItemsInCollectionByIDCalls() []struct {
 }
 
 // GetAllItemsInCollectionByName calls GetAllItemsInCollectionByNameFunc.
-func (mock *InterfaceMock) GetAllItemsInCollectionByName(collectionName string, maxPages int, myFunc webflowAPI.CollectFunc) error {
+func (mock *InterfaceMock) GetAllItemsInCollectionByName(collectionName string, maxPages int) ([]json.RawMessage, error) {
 	if mock.GetAllItemsInCollectionByNameFunc == nil {
 		panic("InterfaceMock.GetAllItemsInCollectionByNameFunc: method is nil but Interface.GetAllItemsInCollectionByName was just called")
 	}
 	callInfo := struct {
 		CollectionName string
 		MaxPages       int
-		MyFunc         webflowAPI.CollectFunc
 	}{
 		CollectionName: collectionName,
 		MaxPages:       maxPages,
-		MyFunc:         myFunc,
 	}
 	lockInterfaceMockGetAllItemsInCollectionByName.Lock()
 	mock.calls.GetAllItemsInCollectionByName = append(mock.calls.GetAllItemsInCollectionByName, callInfo)
 	lockInterfaceMockGetAllItemsInCollectionByName.Unlock()
-	return mock.GetAllItemsInCollectionByNameFunc(collectionName, maxPages, myFunc)
+	return mock.GetAllItemsInCollectionByNameFunc(collectionName, maxPages)
 }
 
 // GetAllItemsInCollectionByNameCalls gets all the calls that were made to GetAllItemsInCollectionByName.
@@ -190,12 +181,10 @@ func (mock *InterfaceMock) GetAllItemsInCollectionByName(collectionName string, 
 func (mock *InterfaceMock) GetAllItemsInCollectionByNameCalls() []struct {
 	CollectionName string
 	MaxPages       int
-	MyFunc         webflowAPI.CollectFunc
 } {
 	var calls []struct {
 		CollectionName string
 		MaxPages       int
-		MyFunc         webflowAPI.CollectFunc
 	}
 	lockInterfaceMockGetAllItemsInCollectionByName.RLock()
 	calls = mock.calls.GetAllItemsInCollectionByName
