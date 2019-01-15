@@ -229,39 +229,6 @@ func TestGetAllCollections(t *testing.T) {
 	{
 		// Start a special, local HTTP server.
 		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			reqURI := req.URL.String()
-			expectedURI := fmt.Sprintf(listCollectionsURL, siteID)
-			if reqURI != expectedURI {
-				t.Errorf(
-					"GetAllCollections() did not request the proper URI! requested '%s'; expected '%s'.",
-					reqURI,
-					expectedURI,
-				)
-			}
-			data, _ := json.Marshal(exampleCollections)
-			rw.Write(data)
-		}))
-		defer server.Close()
-
-		api := New("mytoken", siteID, nil)
-		api.BaseURL = server.URL
-		res, err := api.GetAllCollections()
-
-		if err != nil {
-			t.Error("GetAllCollections() is expected to return no func error when receiving a properly formatted response.")
-		}
-
-		if len(*res) != len(*exampleCollections) {
-			t.Errorf(
-				"GetAllCollections() is expected to return %d collections! Got %d.",
-				len(*exampleCollections),
-				len(*res),
-			)
-		}
-	}
-	{
-		// Start a special, local HTTP server.
-		server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			rw.WriteHeader(http.StatusRequestTimeout)
 			rw.Write([]byte{})
 		}))
@@ -302,18 +269,41 @@ func TestGetAllCollections(t *testing.T) {
 			t.Errorf("GetAllCollections() returned an incorrect error message! Got '%s'; expected '%s'.", err.Error(), errMsg)
 		}
 	}
+	{
+		api := New("mytoken", siteID, nil)
+		api.methodGet = func(uri string, queryParams map[string]string, decodedResponse interface{}) error {
+			tmpJSON, err := json.Marshal(exampleCollections)
+			if err != nil {
+				return err
+			}
+			return json.Unmarshal(tmpJSON, decodedResponse)
+		}
+
+		res, err := api.GetAllCollections()
+
+		if err != nil {
+			t.Error("GetAllCollections() is expected to return no func error when receiving a properly formatted response.")
+		}
+
+		if res == nil || len(*res) != len(*exampleCollections) {
+			t.Errorf(
+				"GetAllCollections() is expected to return %d collections! Got %d.",
+				len(*exampleCollections),
+				len(*res),
+			)
+		}
+	}
 }
 
 func TestGetCollectionByName(t *testing.T) {
-	// Start a special, local HTTP server.
-	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		data, _ := json.Marshal(exampleCollections)
-		rw.Write(data)
-	}))
-	defer server.Close()
-
 	api := New("mytoken", siteID, nil)
-	api.BaseURL = server.URL
+	api.methodGet = func(uri string, queryParams map[string]string, decodedResponse interface{}) error {
+		tmpJSON, err := json.Marshal(exampleCollections)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(tmpJSON, decodedResponse)
+	}
 
 	// Test searching for a collection that exists.
 	{
@@ -507,44 +497,52 @@ func TestGetAllItemsInCollectionByName(t *testing.T) {
 	}
 }
 
-// func TestGetItem(t *testing.T) {
-// 	api := New("mytoken", siteID, nil)
-// 	api.BaseURL = server.URL
+func TestGetItem(t *testing.T) {
+	api := New("mytoken", siteID, nil)
 
-// 	{
-// 		item, err := api.getItem({})
-// 		if err == nil {
-// 			t.Errorf("GetItem() is expected to return an error when no name or ID is passed.")
-// 		}
-// 	}
-// 	{
-// 		item, err := api.getItem({ Name: 'a' })
-// 		if err != nil {
-// 			t.Errorf("GetItem() is expected to not error when a name is given.")
-// 		}
-
-// 		if !reflect.DeepEqual(item, exampleItem) {
-// 			t.Errorf("GetItem() is expected to return the appropriate item by name.\nExpected: %+v\nGo: %+v", exampleItem, item)
-// 		}
-// 	}
-// 	{
-// 		item, err := api.getItem({ ID: '1' })
-// 		if err != nil {
-// 			t.Errorf("GetItem() is expected to not error when an ID is given.")
-// 		}
-
-// 		if !reflect.DeepEqual(item, exampleItem) {
-// 			t.Errorf("GetItem() is expected to return the appropriate item by ID.\nExpected: %+v\nGo: %+v", exampleItem, item)
-// 		}
-// 	}
-// 	{
-// 		item, err := api.getItem({ Name: 'a', ID: '1' })
-// 		if err != nil {
-// 			t.Errorf("GetItem() is expected to not error when a name and ID are given.")
-// 		}
-
-// 		if !reflect.DeepEqual(item, exampleItem) {
-// 			t.Errorf("GetItem() is expected to return the appropriate item by name and ID.\nExpected: %+v\nGo: %+v", exampleItem, item)
-// 		}
-// 	}
-// }
+	{
+		item, err := api.GetItem("", "")
+		if err != nil {
+			t.Errorf("GetItem() is expected to not error when neither a name nor an ID is given.")
+		}
+		if item != nil {
+			t.Errorf("GetItem() is expected to return nothing whenever neither a name nor an ID is given. Got: %+v", item)
+		}
+	}
+	{
+		item, err := api.GetItem("z", "")
+		if err != nil {
+			t.Errorf("GetItem() is expected to not error when a name that is not found is given.")
+		}
+		if item != nil {
+			t.Errorf("GetItem() is expected to return nothing if the item is not found. Got: %+v", item)
+		}
+	}
+	{
+		item, err := api.GetItem("a", "")
+		if err != nil {
+			t.Errorf("GetItem() is expected to not error when a name that is found is given.")
+		}
+		if !reflect.DeepEqual(item, exampleItemDog1) {
+			t.Errorf("GetItem() is expected to return the appropriate item by name.\nExpected: %+v\nGot: %+v", exampleItemDog1, item)
+		}
+	}
+	{
+		item, err := api.GetItem("", "1")
+		if err != nil {
+			t.Errorf("GetItem() is expected to not error when an ID is given.")
+		}
+		if !reflect.DeepEqual(item, exampleItemDog1) {
+			t.Errorf("GetItem() is expected to return the appropriate item by ID.\nExpected: %+v\nGot: %+v", exampleItemDog1, item)
+		}
+	}
+	{
+		item, err := api.GetItem("a", "1")
+		if err != nil {
+			t.Errorf("GetItem() is expected to not error when a name and ID are given.")
+		}
+		if !reflect.DeepEqual(item, exampleItemDog1) {
+			t.Errorf("GetItem() is expected to return the appropriate item by name and ID.\nExpected: %+v\nGot: %+v", exampleItemDog1, item)
+		}
+	}
+}

@@ -40,6 +40,11 @@ type Interface interface {
 type apiConfig struct {
 	Client                          *pester.Client
 	Token, Version, BaseURL, SiteID string
+	methodGet                       func(uri string, queryParams map[string]string, decodedResponse interface{}) error
+	getAllCollections               func() (*Collections, error)
+	getCollectionByName             func(name string) (*Collection, error)
+	getAllItemsInCollectionByID     func(collectionID string, maxPages int) ([]json.RawMessage, error)
+	getAllItemsInCollectionByName   func(collectionName string, maxPages int) ([]json.RawMessage, error)
 }
 
 // New Create a new configuration struct for the Webflow API object.
@@ -70,6 +75,11 @@ func New(token, siteID string, hc *http.Client) *apiConfig {
 
 // MethodGet Execute a HTTP GET on the specified URI.
 func (api *apiConfig) MethodGet(uri string, queryParams map[string]string, decodedResponse interface{}) error {
+	// If an override was configured, use it instead.
+	if api.methodGet != nil {
+		return api.methodGet(uri, queryParams, decodedResponse)
+	}
+
 	// Form the request to make to WebFlow.
 	req, err := http.NewRequest("GET", api.BaseURL+uri, nil)
 	if err != nil {
@@ -115,6 +125,11 @@ func (api *apiConfig) MethodGet(uri string, queryParams map[string]string, decod
 
 // GetAllCollections Ask the Webflow API for all the collections on a given site.
 func (api *apiConfig) GetAllCollections() (*Collections, error) {
+	// If an override was configured, use it instead.
+	if api.getAllCollections != nil {
+		return api.getAllCollections()
+	}
+
 	collections := &Collections{}
 	err := api.MethodGet(fmt.Sprintf(listCollectionsURL, api.SiteID), nil, collections)
 
@@ -127,6 +142,11 @@ func (api *apiConfig) GetAllCollections() (*Collections, error) {
 
 // GetCollectionByName Query Webflow for all the collections then search them for the requested name, case insensitive.
 func (api *apiConfig) GetCollectionByName(name string) (*Collection, error) {
+	// If an override was configured, use it instead.
+	if api.getCollectionByName != nil {
+		return api.getCollectionByName(name)
+	}
+
 	collections, err := api.GetAllCollections()
 	if err != nil {
 		return nil, err
@@ -146,6 +166,11 @@ func (api *apiConfig) GetCollectionByName(name string) (*Collection, error) {
 
 // GetAllItemsInCollectionByID Ask the Webflow API for all the items in a given collection, by the collection's ID.
 func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages int) ([]json.RawMessage, error) {
+	// If an override was configured, use it instead.
+	if api.getAllItemsInCollectionByID != nil {
+		return api.getAllItemsInCollectionByID(collectionID, maxPages)
+	}
+
 	offset := 0
 	items := []json.RawMessage{}
 
@@ -184,6 +209,11 @@ func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages 
 // GetAllItemsInCollectionByName Ask the Webflow API for all the items in a given collection, by the collection's name.
 // The collection name will be searched with case insensitivity.
 func (api *apiConfig) GetAllItemsInCollectionByName(collectionName string, maxPages int) ([]json.RawMessage, error) {
+	// If an override was configured, use it instead.
+	if api.getAllItemsInCollectionByName != nil {
+		return api.getAllItemsInCollectionByName(collectionName, maxPages)
+	}
+
 	// Find the collection by name.
 	collection, err := api.GetCollectionByName(collectionName)
 	if err != nil {
@@ -196,4 +226,8 @@ func (api *apiConfig) GetAllItemsInCollectionByName(collectionName string, maxPa
 
 	// Now find the items by the collection's ID.
 	return api.GetAllItemsInCollectionByID(collection.ID, maxPages)
+}
+
+func (api *apiConfig) GetItem(name, id string) (json.RawMessage, error) {
+	return nil, nil
 }
