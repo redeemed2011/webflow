@@ -13,3 +13,9 @@ npm install -g nodemon
 cd "${GOPATH}" && \
   curl -L https://git.io/vp6lP | sh
 cd - || exit 1
+
+# Install the package manager.
+go get -u github.com/golang/dep/cmd/dep
+
+# Ensure all the packages are installed and up to date.
+dep ensure -update
