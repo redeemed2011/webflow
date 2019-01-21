@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/sethgrid/pester"
+	"github.com/tidwall/gjson"
 )
 
 const (
@@ -32,19 +33,22 @@ type Interface interface {
 	MethodGet(uri string, queryParams map[string]string, decodedResponse interface{}) error
 	GetAllCollections() (*Collections, error)
 	GetCollectionByName(name string) (*Collection, error)
-	GetAllItemsInCollectionByID(collectionID string, maxPages int) ([]json.RawMessage, error)
-	GetAllItemsInCollectionByName(collectionName string, maxPages int) ([]json.RawMessage, error)
+	GetAllItemsInCollectionByID(collectionID string, maxPages int) ([][]byte, error)
+	GetAllItemsInCollectionByName(collectionName string, maxPages int) ([][]byte, error)
+	GetItem(cName, cID, iName, iID string) ([]byte, error)
 }
 
 // apiConfig Represents a configuration struct for Webflow apiConfig object.
 type apiConfig struct {
 	Client                          *pester.Client
 	Token, Version, BaseURL, SiteID string
-	methodGet                       func(uri string, queryParams map[string]string, decodedResponse interface{}) error
-	getAllCollections               func() (*Collections, error)
-	getCollectionByName             func(name string) (*Collection, error)
-	getAllItemsInCollectionByID     func(collectionID string, maxPages int) ([]json.RawMessage, error)
-	getAllItemsInCollectionByName   func(collectionName string, maxPages int) ([]json.RawMessage, error)
+	// The following methods are overrides for the public methods. Use only for internal testing of the pkg.
+	methodGet                     func(uri string, queryParams map[string]string, decodedResponse interface{}) error
+	getAllCollections             func() (*Collections, error)
+	getCollectionByName           func(name string) (*Collection, error)
+	getAllItemsInCollectionByID   func(collectionID string, maxPages int) ([][]byte, error)
+	getAllItemsInCollectionByName func(collectionName string, maxPages int) ([][]byte, error)
+	getItem                       func(cName, cID, iName, iID string) ([]byte, error)
 }
 
 // New Create a new configuration struct for the Webflow API object.
@@ -165,14 +169,14 @@ func (api *apiConfig) GetCollectionByName(name string) (*Collection, error) {
 }
 
 // GetAllItemsInCollectionByID Ask the Webflow API for all the items in a given collection, by the collection's ID.
-func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages int) ([]json.RawMessage, error) {
+func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages int) ([][]byte, error) {
 	// If an override was configured, use it instead.
 	if api.getAllItemsInCollectionByID != nil {
 		return api.getAllItemsInCollectionByID(collectionID, maxPages)
 	}
 
 	offset := 0
-	items := []json.RawMessage{}
+	items := [][]byte{}
 
 	for {
 		queryParams := map[string]string{
@@ -180,14 +184,20 @@ func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages 
 			"limit":  "100",
 		}
 
-		// collectionItems := reflect.New(reflect.TypeOf(itemType)).Interface()
 		collectionItems := &CollectionItems{}
 		err := api.MethodGet(fmt.Sprintf(listCollectionItemsURL, collectionID), queryParams, collectionItems)
 		if err != nil {
 			return nil, err
 		}
 
-		items = append(items, collectionItems.Items)
+		// Iteratae over all the collection's items.
+		jsonItems := gjson.Parse(string(collectionItems.Items))
+		jsonItems.ForEach(func(key, value gjson.Result) bool {
+			// Add each json item to the slice.
+			items = append(items, []byte(value.Raw))
+			// Keep iterating.
+			return true
+		})
 
 		offset = collectionItems.Offset + collectionItems.Count
 
@@ -208,7 +218,7 @@ func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages 
 
 // GetAllItemsInCollectionByName Ask the Webflow API for all the items in a given collection, by the collection's name.
 // The collection name will be searched with case insensitivity.
-func (api *apiConfig) GetAllItemsInCollectionByName(collectionName string, maxPages int) ([]json.RawMessage, error) {
+func (api *apiConfig) GetAllItemsInCollectionByName(collectionName string, maxPages int) ([][]byte, error) {
 	// If an override was configured, use it instead.
 	if api.getAllItemsInCollectionByName != nil {
 		return api.getAllItemsInCollectionByName(collectionName, maxPages)
@@ -228,6 +238,61 @@ func (api *apiConfig) GetAllItemsInCollectionByName(collectionName string, maxPa
 	return api.GetAllItemsInCollectionByID(collection.ID, maxPages)
 }
 
-func (api *apiConfig) GetItem(name, id string) (json.RawMessage, error) {
+// GetItem Searches all the items in a given collection for the desired item name or ID.
+// cName Case insensitive search for collection by name. Not necessary if `cID` is provided.
+// cID ID of collection to find. Not necessary if `cName` is provided.
+// iName Case insensitive search for item by name. Not necessary if `iID` is provided.
+// iID ID of item to find. Not necessary if `iName` is provided.
+func (api *apiConfig) GetItem(cName, cID, iName, iID string) ([]byte, error) {
+	// If an override was configured, use it instead.
+	if api.getItem != nil {
+		return api.getItem(cName, cID, iName, iID)
+	}
+
+	var items [][]byte
+	var err error
+
+	// Just quietly return nothing since neither a collection name nor an ID was provided.
+	if cName == "" && cID == "" {
+		return nil, nil
+	}
+
+	// Just quietly return nothing since neither an item name nor an ID was provided.
+	if iName == "" && iID == "" {
+		return nil, nil
+	}
+
+	if cName != "" {
+		items, err = api.GetAllItemsInCollectionByName(cName, 10)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get all items in collection by collection name; error: %+v", err)
+		}
+	} else {
+		items, err = api.GetAllItemsInCollectionByID(cID, 10)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get all items in collection by collection ID; error: %+v", err)
+		}
+	}
+
+	for _, rawItem := range items {
+		item := &CollectionItem{}
+		if err2 := json.Unmarshal(rawItem, item); err2 != nil {
+			return nil, fmt.Errorf(
+				"GetItem() did not receive the proper collection item type: %+v",
+				err2,
+			)
+		}
+
+		if iName != "" && item.Name != iName {
+			continue
+		}
+
+		if iID != "" && item.ID != iID {
+			continue
+		}
+
+		return rawItem, nil
+	}
+
 	return nil, nil
 }

@@ -4,7 +4,6 @@
 package mock
 
 import (
-	"encoding/json"
 	"github.com/redeemed2011/webflowAPI"
 	"sync"
 )
@@ -14,6 +13,7 @@ var (
 	lockInterfaceMockGetAllItemsInCollectionByID   sync.RWMutex
 	lockInterfaceMockGetAllItemsInCollectionByName sync.RWMutex
 	lockInterfaceMockGetCollectionByName           sync.RWMutex
+	lockInterfaceMockGetItem                       sync.RWMutex
 	lockInterfaceMockMethodGet                     sync.RWMutex
 )
 
@@ -26,14 +26,17 @@ var (
 //             GetAllCollectionsFunc: func() (*webflowAPI.Collections, error) {
 // 	               panic("mock out the GetAllCollections method")
 //             },
-//             GetAllItemsInCollectionByIDFunc: func(collectionID string, maxPages int) ([]json.RawMessage, error) {
+//             GetAllItemsInCollectionByIDFunc: func(collectionID string, maxPages int) ([][]byte, error) {
 // 	               panic("mock out the GetAllItemsInCollectionByID method")
 //             },
-//             GetAllItemsInCollectionByNameFunc: func(collectionName string, maxPages int) ([]json.RawMessage, error) {
+//             GetAllItemsInCollectionByNameFunc: func(collectionName string, maxPages int) ([][]byte, error) {
 // 	               panic("mock out the GetAllItemsInCollectionByName method")
 //             },
 //             GetCollectionByNameFunc: func(name string) (*webflowAPI.Collection, error) {
 // 	               panic("mock out the GetCollectionByName method")
+//             },
+//             GetItemFunc: func(cName string, cID string, iName string, iID string) ([]byte, error) {
+// 	               panic("mock out the GetItem method")
 //             },
 //             MethodGetFunc: func(uri string, queryParams map[string]string, decodedResponse interface{}) error {
 // 	               panic("mock out the MethodGet method")
@@ -49,13 +52,16 @@ type InterfaceMock struct {
 	GetAllCollectionsFunc func() (*webflowAPI.Collections, error)
 
 	// GetAllItemsInCollectionByIDFunc mocks the GetAllItemsInCollectionByID method.
-	GetAllItemsInCollectionByIDFunc func(collectionID string, maxPages int) ([]json.RawMessage, error)
+	GetAllItemsInCollectionByIDFunc func(collectionID string, maxPages int) ([][]byte, error)
 
 	// GetAllItemsInCollectionByNameFunc mocks the GetAllItemsInCollectionByName method.
-	GetAllItemsInCollectionByNameFunc func(collectionName string, maxPages int) ([]json.RawMessage, error)
+	GetAllItemsInCollectionByNameFunc func(collectionName string, maxPages int) ([][]byte, error)
 
 	// GetCollectionByNameFunc mocks the GetCollectionByName method.
 	GetCollectionByNameFunc func(name string) (*webflowAPI.Collection, error)
+
+	// GetItemFunc mocks the GetItem method.
+	GetItemFunc func(cName string, cID string, iName string, iID string) ([]byte, error)
 
 	// MethodGetFunc mocks the MethodGet method.
 	MethodGetFunc func(uri string, queryParams map[string]string, decodedResponse interface{}) error
@@ -83,6 +89,17 @@ type InterfaceMock struct {
 		GetCollectionByName []struct {
 			// Name is the name argument value.
 			Name string
+		}
+		// GetItem holds details about calls to the GetItem method.
+		GetItem []struct {
+			// CName is the cName argument value.
+			CName string
+			// CID is the cID argument value.
+			CID string
+			// IName is the iName argument value.
+			IName string
+			// IID is the iID argument value.
+			IID string
 		}
 		// MethodGet holds details about calls to the MethodGet method.
 		MethodGet []struct {
@@ -123,7 +140,7 @@ func (mock *InterfaceMock) GetAllCollectionsCalls() []struct {
 }
 
 // GetAllItemsInCollectionByID calls GetAllItemsInCollectionByIDFunc.
-func (mock *InterfaceMock) GetAllItemsInCollectionByID(collectionID string, maxPages int) ([]json.RawMessage, error) {
+func (mock *InterfaceMock) GetAllItemsInCollectionByID(collectionID string, maxPages int) ([][]byte, error) {
 	if mock.GetAllItemsInCollectionByIDFunc == nil {
 		panic("InterfaceMock.GetAllItemsInCollectionByIDFunc: method is nil but Interface.GetAllItemsInCollectionByID was just called")
 	}
@@ -158,7 +175,7 @@ func (mock *InterfaceMock) GetAllItemsInCollectionByIDCalls() []struct {
 }
 
 // GetAllItemsInCollectionByName calls GetAllItemsInCollectionByNameFunc.
-func (mock *InterfaceMock) GetAllItemsInCollectionByName(collectionName string, maxPages int) ([]json.RawMessage, error) {
+func (mock *InterfaceMock) GetAllItemsInCollectionByName(collectionName string, maxPages int) ([][]byte, error) {
 	if mock.GetAllItemsInCollectionByNameFunc == nil {
 		panic("InterfaceMock.GetAllItemsInCollectionByNameFunc: method is nil but Interface.GetAllItemsInCollectionByName was just called")
 	}
@@ -220,6 +237,49 @@ func (mock *InterfaceMock) GetCollectionByNameCalls() []struct {
 	lockInterfaceMockGetCollectionByName.RLock()
 	calls = mock.calls.GetCollectionByName
 	lockInterfaceMockGetCollectionByName.RUnlock()
+	return calls
+}
+
+// GetItem calls GetItemFunc.
+func (mock *InterfaceMock) GetItem(cName string, cID string, iName string, iID string) ([]byte, error) {
+	if mock.GetItemFunc == nil {
+		panic("InterfaceMock.GetItemFunc: method is nil but Interface.GetItem was just called")
+	}
+	callInfo := struct {
+		CName string
+		CID   string
+		IName string
+		IID   string
+	}{
+		CName: cName,
+		CID:   cID,
+		IName: iName,
+		IID:   iID,
+	}
+	lockInterfaceMockGetItem.Lock()
+	mock.calls.GetItem = append(mock.calls.GetItem, callInfo)
+	lockInterfaceMockGetItem.Unlock()
+	return mock.GetItemFunc(cName, cID, iName, iID)
+}
+
+// GetItemCalls gets all the calls that were made to GetItem.
+// Check the length with:
+//     len(mockedInterface.GetItemCalls())
+func (mock *InterfaceMock) GetItemCalls() []struct {
+	CName string
+	CID   string
+	IName string
+	IID   string
+} {
+	var calls []struct {
+		CName string
+		CID   string
+		IName string
+		IID   string
+	}
+	lockInterfaceMockGetItem.RLock()
+	calls = mock.calls.GetItem
+	lockInterfaceMockGetItem.RUnlock()
 	return calls
 }
 

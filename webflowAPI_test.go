@@ -31,18 +31,22 @@ var (
 		ID:   "1",
 		Name: "blue",
 	}
-	exampleItemDog2 = &mockItem{
+	exampleItemDog1JSON, _ = json.Marshal(*exampleItemDog1)
+	exampleItemDog2        = &mockItem{
 		ID:   "2",
-		Name: "blue",
+		Name: "green",
 	}
-	exampleItemDog3 = &mockItem{
-		ID:   "2",
-		Name: "blue",
+	exampleItemDog2JSON, _ = json.Marshal(*exampleItemDog2)
+	exampleItemDog3        = &mockItem{
+		ID:   "3",
+		Name: "red",
 	}
-	exampleItemDog4 = &mockItem{
-		ID:   "2",
-		Name: "blue",
+	exampleItemDog3JSON, _ = json.Marshal(*exampleItemDog3)
+	exampleItemDog4        = &mockItem{
+		ID:   "4",
+		Name: "brown",
 	}
+	exampleItemDog4JSON, _               = json.Marshal(*exampleItemDog4)
 	apiResponseItemsDogs1SubItemsJSON, _ = json.Marshal([]mockItem{
 		*exampleItemDog1,
 		*exampleItemDog2,
@@ -71,7 +75,13 @@ var (
 		*exampleItemDog4,
 	}
 	exampleItemsDogsJSON, _ = json.Marshal(*exampleItemsDogs)
-	apiResponseItemsDogs    = &CollectionItems{
+	exampleItemsDogsJSON2   = [][]byte{
+		exampleItemDog1JSON,
+		exampleItemDog2JSON,
+		exampleItemDog3JSON,
+		exampleItemDog4JSON,
+	}
+	apiResponseItemsDogs = &CollectionItems{
 		Items:  exampleItemsDogsJSON,
 		Offset: 0,
 		Count:  4,
@@ -369,15 +379,15 @@ func TestGetAllItemsInCollectionByID(t *testing.T) {
 
 		items := []mockItem{}
 		for _, itemJSON := range itemsJSON {
-			tmpItems := &[]mockItem{}
-			if err2 := json.Unmarshal(itemJSON, tmpItems); err2 != nil {
+			tmpItem := &mockItem{}
+			if err2 := json.Unmarshal(itemJSON, tmpItem); err2 != nil {
 				t.Errorf(
 					"GetAllItemsInCollectionByID() did not return the proper collection items type. Error %+v",
 					err2,
 				)
 			}
 
-			items = append(items, *tmpItems...)
+			items = append(items, *tmpItem)
 		}
 
 		if !reflect.DeepEqual(items, *exampleItemsDogs) {
@@ -425,15 +435,15 @@ func TestGetAllItemsInCollectionByID(t *testing.T) {
 
 		items := []mockItem{}
 		for _, itemJSON := range itemsJSON {
-			tmpItems := &[]mockItem{}
-			if err2 := json.Unmarshal(itemJSON, tmpItems); err2 != nil {
+			tmpItem := &mockItem{}
+			if err2 := json.Unmarshal(itemJSON, tmpItem); err2 != nil {
 				t.Errorf(
 					"GetAllItemsInCollectionByID() did not return the proper collection items type. Error %+v",
 					err2,
 				)
 			}
 
-			items = append(items, *tmpItems...)
+			items = append(items, *tmpItem)
 		}
 
 		if !reflect.DeepEqual(items, *exampleItemsCats) {
@@ -481,15 +491,15 @@ func TestGetAllItemsInCollectionByName(t *testing.T) {
 
 	items := []mockItem{}
 	for _, itemJSON := range itemsJSON {
-		tmpItems := &[]mockItem{}
-		if err2 := json.Unmarshal(itemJSON, tmpItems); err2 != nil {
+		tmpItem := &mockItem{}
+		if err2 := json.Unmarshal(itemJSON, tmpItem); err2 != nil {
 			t.Errorf(
 				"GetAllItemsInCollectionByID() did not return the proper collection items type. Error %+v",
 				err2,
 			)
 		}
 
-		items = append(items, *tmpItems...)
+		items = append(items, *tmpItem)
 	}
 
 	if !reflect.DeepEqual(items, *exampleItemsDogs) {
@@ -499,50 +509,74 @@ func TestGetAllItemsInCollectionByName(t *testing.T) {
 
 func TestGetItem(t *testing.T) {
 	api := New("mytoken", siteID, nil)
+	api.getAllItemsInCollectionByName = func(cName string, maxPages int) ([][]byte, error) {
+		return exampleItemsDogsJSON2, nil
+	}
+	api.getAllItemsInCollectionByID = func(cID string, maxPages int) ([][]byte, error) {
+		return exampleItemsDogsJSON2, nil
+	}
 
 	{
-		item, err := api.GetItem("", "")
+		item, err := api.GetItem("", "", "", "")
 		if err != nil {
-			t.Errorf("GetItem() is expected to not error when neither a name nor an ID is given.")
+			t.Errorf("GetItem() is expected to not error when neither a name nor an ID is given: %+v", err)
 		}
 		if item != nil {
 			t.Errorf("GetItem() is expected to return nothing whenever neither a name nor an ID is given. Got: %+v", item)
 		}
 	}
 	{
-		item, err := api.GetItem("z", "")
+		item, err := api.GetItem("dogs", "", "z", "")
 		if err != nil {
-			t.Errorf("GetItem() is expected to not error when a name that is not found is given.")
+			t.Errorf("GetItem() is expected to not error when a name that is not found is given: %+v", err)
 		}
 		if item != nil {
 			t.Errorf("GetItem() is expected to return nothing if the item is not found. Got: %+v", item)
 		}
 	}
 	{
-		item, err := api.GetItem("a", "")
+		item, err := api.GetItem("", "1", "blue", "")
 		if err != nil {
-			t.Errorf("GetItem() is expected to not error when a name that is found is given.")
+			t.Errorf("GetItem() is expected to not error when a name that is found is given: %+v", err)
 		}
-		if !reflect.DeepEqual(item, exampleItemDog1) {
-			t.Errorf("GetItem() is expected to return the appropriate item by name.\nExpected: %+v\nGot: %+v", exampleItemDog1, item)
+		if !reflect.DeepEqual(item, exampleItemDog1JSON) {
+			t.Errorf(
+				"GetItem() is expected to return the appropriate item by name.\nExpected: %T %+v\nGot: %T %+v",
+				exampleItemDog1JSON,
+				string(exampleItemDog1JSON),
+				item,
+				string(item),
+			)
 		}
 	}
 	{
-		item, err := api.GetItem("", "1")
+		item, err := api.GetItem("dogs", "", "", "3")
 		if err != nil {
-			t.Errorf("GetItem() is expected to not error when an ID is given.")
+			t.Errorf("GetItem() is expected to not error when an ID is given: %+v", err)
 		}
-		if !reflect.DeepEqual(item, exampleItemDog1) {
-			t.Errorf("GetItem() is expected to return the appropriate item by ID.\nExpected: %+v\nGot: %+v", exampleItemDog1, item)
+		if !reflect.DeepEqual(item, exampleItemDog3JSON) {
+			t.Errorf(
+				"GetItem() is expected to return the appropriate item by ID.\nExpected: %T %+v\nGot: %T %+v",
+				exampleItemDog3JSON,
+				string(exampleItemDog3JSON),
+				item,
+				string(item),
+			)
 		}
 	}
 	{
-		item, err := api.GetItem("a", "1")
+		item, err := api.GetItem("", "1", "brown", "4")
 		if err != nil {
-			t.Errorf("GetItem() is expected to not error when a name and ID are given.")
+			t.Errorf("GetItem() is expected to not error when a name and ID are given: %+v", err)
 		}
-		if !reflect.DeepEqual(item, exampleItemDog1) {
-			t.Errorf("GetItem() is expected to return the appropriate item by name and ID.\nExpected: %+v\nGot: %+v", exampleItemDog1, item)
+		if !reflect.DeepEqual(item, exampleItemDog4JSON) {
+			t.Errorf(
+				"GetItem() is expected to return the appropriate item by name and ID.\nExpected: %T %+v\nGot: %T %+v",
+				exampleItemDog4JSON,
+				string(exampleItemDog4JSON),
+				item,
+				string(item),
+			)
 		}
 	}
 }
