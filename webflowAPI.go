@@ -33,9 +33,11 @@ type Interface interface {
 	MethodGet(uri string, queryParams map[string]string, decodedResponse interface{}) error
 	GetAllCollections() (*Collections, error)
 	GetCollectionByName(name string) (*Collection, error)
-	GetAllItemsInCollectionByID(collectionID string, maxPages int) ([][]byte, error)
-	GetAllItemsInCollectionByName(collectionName string, maxPages int) ([][]byte, error)
-	GetItem(cName, cID, iName, iID string) ([]byte, error)
+	GetCollectionBySlug(slug string) (*Collection, error)
+	GetAllItemsInCollectionByID(ID string, maxPages int) ([][]byte, error)
+	GetAllItemsInCollectionByName(name string, maxPages int) ([][]byte, error)
+	GetAllItemsInCollectionBySlug(slug string, maxPages int) ([][]byte, error)
+	GetItem(cName, cSlug, cID, iName, iID string) ([]byte, error)
 }
 
 // apiConfig Represents a configuration struct for Webflow apiConfig object.
@@ -46,9 +48,11 @@ type apiConfig struct {
 	methodGet                     func(uri string, queryParams map[string]string, decodedResponse interface{}) error
 	getAllCollections             func() (*Collections, error)
 	getCollectionByName           func(name string) (*Collection, error)
-	getAllItemsInCollectionByID   func(collectionID string, maxPages int) ([][]byte, error)
-	getAllItemsInCollectionByName func(collectionName string, maxPages int) ([][]byte, error)
-	getItem                       func(cName, cID, iName, iID string) ([]byte, error)
+	getCollectionBySlug           func(slug string) (*Collection, error)
+	getAllItemsInCollectionByID   func(ID string, maxPages int) ([][]byte, error)
+	getAllItemsInCollectionByName func(name string, maxPages int) ([][]byte, error)
+	getAllItemsInCollectionBySlug func(slug string, maxPages int) ([][]byte, error)
+	getItem                       func(cName, cSlug, cID, iName, iID string) ([]byte, error)
 }
 
 // New Create a new configuration struct for the Webflow API object.
@@ -168,11 +172,35 @@ func (api *apiConfig) GetCollectionByName(name string) (*Collection, error) {
 	return nil, nil
 }
 
+// GetCollectionBySlug Query Webflow for all the collections then search them for the requested slug, case insensitive.
+func (api *apiConfig) GetCollectionBySlug(slug string) (*Collection, error) {
+	// If an override was configured, use it instead.
+	if api.getCollectionBySlug != nil {
+		return api.getCollectionBySlug(slug)
+	}
+
+	collections, err := api.GetAllCollections()
+	if err != nil {
+		return nil, err
+	}
+
+	lowerSlug := strings.ToLower(slug)
+
+	for _, collection := range *collections {
+		if strings.ToLower(collection.Slug) == lowerSlug {
+			return &collection, nil
+		}
+	}
+
+	// Report that no collection was found by that slug.
+	return nil, nil
+}
+
 // GetAllItemsInCollectionByID Ask the Webflow API for all the items in a given collection, by the collection's ID.
-func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages int) ([][]byte, error) {
+func (api *apiConfig) GetAllItemsInCollectionByID(id string, maxPages int) ([][]byte, error) {
 	// If an override was configured, use it instead.
 	if api.getAllItemsInCollectionByID != nil {
-		return api.getAllItemsInCollectionByID(collectionID, maxPages)
+		return api.getAllItemsInCollectionByID(id, maxPages)
 	}
 
 	offset := 0
@@ -185,7 +213,7 @@ func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages 
 		}
 
 		collectionItems := &CollectionItems{}
-		err := api.MethodGet(fmt.Sprintf(listCollectionItemsURL, collectionID), queryParams, collectionItems)
+		err := api.MethodGet(fmt.Sprintf(listCollectionItemsURL, id), queryParams, collectionItems)
 		if err != nil {
 			return nil, err
 		}
@@ -218,14 +246,36 @@ func (api *apiConfig) GetAllItemsInCollectionByID(collectionID string, maxPages 
 
 // GetAllItemsInCollectionByName Ask the Webflow API for all the items in a given collection, by the collection's name.
 // The collection name will be searched with case insensitivity.
-func (api *apiConfig) GetAllItemsInCollectionByName(collectionName string, maxPages int) ([][]byte, error) {
+func (api *apiConfig) GetAllItemsInCollectionByName(name string, maxPages int) ([][]byte, error) {
 	// If an override was configured, use it instead.
 	if api.getAllItemsInCollectionByName != nil {
-		return api.getAllItemsInCollectionByName(collectionName, maxPages)
+		return api.getAllItemsInCollectionByName(name, maxPages)
 	}
 
 	// Find the collection by name.
-	collection, err := api.GetCollectionByName(collectionName)
+	collection, err := api.GetCollectionByName(name)
+	if err != nil {
+		return nil, err
+	}
+
+	if collection == nil {
+		return nil, nil
+	}
+
+	// Now find the items by the collection's ID.
+	return api.GetAllItemsInCollectionByID(collection.ID, maxPages)
+}
+
+// GetAllItemsInCollectionBySlug Ask the Webflow API for all the items in a given collection, by the collection's slug.
+// The collection slug will be searched with case insensitivity.
+func (api *apiConfig) GetAllItemsInCollectionBySlug(slug string, maxPages int) ([][]byte, error) {
+	// If an override was configured, use it instead.
+	if api.getAllItemsInCollectionBySlug != nil {
+		return api.getAllItemsInCollectionBySlug(slug, maxPages)
+	}
+
+	// Find the collection by slug.
+	collection, err := api.GetCollectionBySlug(slug)
 	if err != nil {
 		return nil, err
 	}
@@ -239,21 +289,22 @@ func (api *apiConfig) GetAllItemsInCollectionByName(collectionName string, maxPa
 }
 
 // GetItem Searches all the items in a given collection for the desired item name or ID.
-// cName Case insensitive search for collection by name. Not necessary if `cID` is provided.
+// cName Case insensitive search for collection by name. Not necessary if `cSlug` or `cID` is provided.
+// cSlug Case insensitive search for collection by slug. Not necessary if `cName` or `cID` is provided.
 // cID ID of collection to find. Not necessary if `cName` is provided.
 // iName Case insensitive search for item by name. Not necessary if `iID` is provided.
 // iID ID of item to find. Not necessary if `iName` is provided.
-func (api *apiConfig) GetItem(cName, cID, iName, iID string) ([]byte, error) {
+func (api *apiConfig) GetItem(cName, cSlug, cID, iName, iID string) ([]byte, error) {
 	// If an override was configured, use it instead.
 	if api.getItem != nil {
-		return api.getItem(cName, cID, iName, iID)
+		return api.getItem(cName, cSlug, cID, iName, iID)
 	}
 
 	var items [][]byte
 	var err error
 
-	// Just quietly return nothing since neither a collection name nor an ID was provided.
-	if cName == "" && cID == "" {
+	// Just quietly return nothing since a collection name & slug & ID were not provided.
+	if cName == "" && cSlug == "" && cID == "" {
 		return nil, nil
 	}
 
@@ -266,6 +317,11 @@ func (api *apiConfig) GetItem(cName, cID, iName, iID string) ([]byte, error) {
 		items, err = api.GetAllItemsInCollectionByName(cName, 10)
 		if err != nil {
 			return nil, fmt.Errorf("unable to get all items in collection by collection name; error: %+v", err)
+		}
+	} else if cSlug != "" {
+		items, err = api.GetAllItemsInCollectionBySlug(cSlug, 10)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get all items in collection by collection slug; error: %+v", err)
 		}
 	} else {
 		items, err = api.GetAllItemsInCollectionByID(cID, 10)

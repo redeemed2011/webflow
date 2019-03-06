@@ -26,6 +26,7 @@ var (
 	exampleDogCollection = &Collection{
 		ID:   "1",
 		Name: "dogs",
+		Slug: "dogs1",
 	}
 	exampleItemDog1 = &mockItem{
 		ID:   "1",
@@ -133,6 +134,7 @@ var (
 	exampleCatCollection = &Collection{
 		ID:   "2",
 		Name: "cats",
+		Slug: "cats1",
 	}
 	exampleCollections = &Collections{
 		*exampleDogCollection,
@@ -317,7 +319,7 @@ func TestGetCollectionByName(t *testing.T) {
 
 	// Test searching for a collection that exists.
 	{
-		collection, err := api.GetCollectionByName("dogs")
+		collection, err := api.GetCollectionByName(exampleDogCollection.Name)
 
 		if err != nil {
 			t.Error("GetCollectionByName() is expected to return no func error when receiving a properly formatted response.")
@@ -334,6 +336,39 @@ func TestGetCollectionByName(t *testing.T) {
 
 		if collection != nil {
 			t.Errorf("GetCollectionByName() is expected to return nil whenever the collection is not found! Got %+v.", collection)
+		}
+	}
+}
+
+func TestGetCollectionBySlug(t *testing.T) {
+	api := New("mytoken", siteID, nil)
+	api.methodGet = func(uri string, queryParams map[string]string, decodedResponse interface{}) error {
+		tmpJSON, err := json.Marshal(exampleCollections)
+		if err != nil {
+			return err
+		}
+		return json.Unmarshal(tmpJSON, decodedResponse)
+	}
+
+	// Test searching for a collection that exists.
+	{
+		collection, err := api.GetCollectionBySlug(exampleDogCollection.Slug)
+
+		if err != nil {
+			t.Error("GetCollectionBySlug() is expected to return no func error when receiving a properly formatted response.")
+		}
+
+		if !reflect.DeepEqual(collection, exampleDogCollection) {
+			t.Errorf("GetCollectionBySlug() is expected to return exampleDogCollection! Got %+v.", collection)
+		}
+	}
+
+	// Test searching for a collection that does not exist.
+	{
+		collection, _ := api.GetCollectionBySlug("birds")
+
+		if collection != nil {
+			t.Errorf("GetCollectionBySlug() is expected to return nil whenever the collection is not found! Got %+v.", collection)
 		}
 	}
 }
@@ -480,7 +515,7 @@ func TestGetAllItemsInCollectionByName(t *testing.T) {
 
 	api := New("mytoken", siteID, nil)
 	api.BaseURL = server.URL
-	itemsJSON, err := api.GetAllItemsInCollectionByName("dogs", 10)
+	itemsJSON, err := api.GetAllItemsInCollectionByName(exampleDogCollection.Name, 10)
 
 	if err != nil {
 		t.Errorf(
@@ -507,37 +542,107 @@ func TestGetAllItemsInCollectionByName(t *testing.T) {
 	}
 }
 
+// Test the GetAllItemsInCollectionBySlug func for one collection type (dogs).
+func TestGetAllItemsInCollectionBySlug(t *testing.T) {
+	// Start a special, local HTTP server.
+	server := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		reqURI := req.URL.String()
+		collectionURL := fmt.Sprintf(listCollectionsURL, siteID)
+		itemsURL := fmt.Sprintf(listCollectionItemsURL, exampleDogCollection.ID)
+		var data []byte
+		switch true {
+		case strings.HasPrefix(reqURI, collectionURL):
+			data, _ = json.Marshal(exampleCollections)
+		case strings.HasPrefix(reqURI, itemsURL):
+			data, _ = json.Marshal(apiResponseItemsDogs)
+		default:
+			t.Errorf(
+				"GetAllItemsInCollectionByID() did not request the proper URI! requested '%s'; expected '%s' or '%s'.",
+				reqURI,
+				collectionURL,
+				itemsURL,
+			)
+		}
+
+		rw.Write(data)
+	}))
+	defer server.Close()
+
+	api := New("mytoken", siteID, nil)
+	api.BaseURL = server.URL
+	itemsJSON, err := api.GetAllItemsInCollectionBySlug(exampleDogCollection.Slug, 10)
+
+	if err != nil {
+		t.Errorf(
+			"GetAllItemsInCollectionBySlug() is expected to return no error when receiving a properly formatted response. got: %+v",
+			err,
+		)
+	}
+
+	items := []mockItem{}
+	for _, itemJSON := range itemsJSON {
+		tmpItem := &mockItem{}
+		if err2 := json.Unmarshal(itemJSON, tmpItem); err2 != nil {
+			t.Errorf(
+				"GetAllItemsInCollectionByID() did not return the proper collection items type. Error %+v",
+				err2,
+			)
+		}
+
+		items = append(items, *tmpItem)
+	}
+
+	if !reflect.DeepEqual(items, *exampleItemsDogs) {
+		t.Errorf("GetAllItemsInCollectionBySlug() is expected to return exampleItemsDogs! Got %+v.", items)
+	}
+}
+
 func TestGetItem(t *testing.T) {
 	api := New("mytoken", siteID, nil)
-	api.getAllItemsInCollectionByName = func(cName string, maxPages int) ([][]byte, error) {
+	api.getAllItemsInCollectionByName = func(name string, maxPages int) ([][]byte, error) {
 		return exampleItemsDogsJSON2, nil
 	}
-	api.getAllItemsInCollectionByID = func(cID string, maxPages int) ([][]byte, error) {
+	api.getAllItemsInCollectionBySlug = func(slug string, maxPages int) ([][]byte, error) {
+		return exampleItemsDogsJSON2, nil
+	}
+	api.getAllItemsInCollectionByID = func(id string, maxPages int) ([][]byte, error) {
 		return exampleItemsDogsJSON2, nil
 	}
 
 	{
-		item, err := api.GetItem("", "", "", "")
+		item, err := api.GetItem("", "", "", "", "")
 		if err != nil {
-			t.Errorf("GetItem() is expected to not error when neither a name nor an ID is given: %+v", err)
+			t.Errorf("GetItem() is expected to not error when neither an item name nor an ID is given: %+v", err)
 		}
 		if item != nil {
-			t.Errorf("GetItem() is expected to return nothing whenever neither a name nor an ID is given. Got: %+v", item)
+			t.Errorf(
+				"GetItem() is expected to return nothing whenever neither an item name nor an ID is given. Got: %+v",
+				item,
+			)
 		}
 	}
 	{
-		item, err := api.GetItem("dogs", "", "z", "")
+		item, err := api.GetItem(exampleDogCollection.Name, "", "", "z", "")
 		if err != nil {
-			t.Errorf("GetItem() is expected to not error when a name that is not found is given: %+v", err)
+			t.Errorf("GetItem() is expected to not error when an item name that is not found is given: %+v", err)
 		}
 		if item != nil {
 			t.Errorf("GetItem() is expected to return nothing if the item is not found. Got: %+v", item)
 		}
 	}
 	{
-		item, err := api.GetItem("", "1", "blue", "")
+		item, err := api.GetItem("", exampleDogCollection.Slug, "", "z", "")
 		if err != nil {
-			t.Errorf("GetItem() is expected to not error when a name that is found is given: %+v", err)
+			t.Errorf("GetItem() is expected to not error when an item slug that is not found is given: %+v", err)
+		}
+		if item != nil {
+			t.Errorf("GetItem() is expected to return nothing if the item is not found by slug. Got: %+v", item)
+		}
+	}
+	{
+		item, err := api.GetItem("", "", exampleDogCollection.ID, exampleItemDog1.Name, "")
+		if err != nil {
+			t.Errorf("GetItem() is expected to not error when an item name that is found is given: %+v", err)
 		}
 		if !reflect.DeepEqual(item, exampleItemDog1JSON) {
 			t.Errorf(
@@ -550,7 +655,22 @@ func TestGetItem(t *testing.T) {
 		}
 	}
 	{
-		item, err := api.GetItem("dogs", "", "", "3")
+		item, err := api.GetItem("", exampleDogCollection.Slug, "", "", exampleItemDog3.ID)
+		if err != nil {
+			t.Errorf("GetItem() is expected to not error when a collection slug & item ID is given: %+v", err)
+		}
+		if !reflect.DeepEqual(item, exampleItemDog3JSON) {
+			t.Errorf(
+				"GetItem() is expected to return the appropriate item by a collection slug & item ID.\nExpected: %T %+v\nGot: %T %+v",
+				exampleItemDog3JSON,
+				string(exampleItemDog3JSON),
+				item,
+				string(item),
+			)
+		}
+	}
+	{
+		item, err := api.GetItem(exampleDogCollection.Name, "", "", "", exampleItemDog3.ID)
 		if err != nil {
 			t.Errorf("GetItem() is expected to not error when an ID is given: %+v", err)
 		}
@@ -565,7 +685,7 @@ func TestGetItem(t *testing.T) {
 		}
 	}
 	{
-		item, err := api.GetItem("", "1", "brown", "4")
+		item, err := api.GetItem("", "", exampleDogCollection.ID, exampleItemDog4.Name, exampleItemDog4.ID)
 		if err != nil {
 			t.Errorf("GetItem() is expected to not error when a name and ID are given: %+v", err)
 		}
