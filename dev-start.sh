@@ -4,10 +4,8 @@ set -e
 set -x
 
 # Ensure all the packages are installed and up to date.
-dep ensure -update
-# go mod download
-# go mod tidy
-# go mod vendor
+go mod download
+go mod tidy
 
 # Run the project every time a file changes.
 # watcher -depth 6 ./.dev-start-helper.sh
